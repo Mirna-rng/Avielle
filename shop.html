@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Shop Avielle's curated collection of luxury handbags, dresses, jewelry, home objects, beauty, and gifting essentials." />
+    <meta property="og:title" content="Shop Avielle | Luxury Essentials" />
+    <meta property="og:description" content="Browse refined pieces for fashion, beauty, gifting, and living beautifully." />
+    <meta property="og:type" content="website" />
+    <title>Shop Avielle</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="css/style.css" />
+    <script src="js/products.js" defer></script>
+    <script src="js/store.js" defer></script>
+    <script src="js/search.js" defer></script>
+    <script src="js/app.js" defer></script>
+    <script src="js/cart.js" defer></script>
+    <script src="js/wishlist.js" defer></script>
+  </head>
+  <body data-page="shop">
+    <header class="site-header">
+      <div class="container header-inner">
+        <a href="index.html" class="brand" aria-label="Avielle home page">
+          <span class="brand-mark">A</span>
+          <span>Avielle</span>
+        </a>
+        <nav class="main-nav" aria-label="Main navigation">
+          <a href="index.html">Home</a>
+          <a class="is-active" href="shop.html">Shop</a>
+          <a href="categories.html">Categories</a>
+          <a href="about.html">About</a>
+          <a href="contact.html">Contact</a>
+          <a href="admin.html">Admin</a>
+        </nav>
+        <div class="header-tools">
+          <form class="search-form searchbox" role="search" aria-label="Search products">
+            <span aria-hidden="true">⌕</span>
+            <input type="search" name="search" id="shopSearch" placeholder="Search" aria-label="Search the shop" />
+          </form>
+          <div class="nav-actions">
+            <a class="icon-button icon-badge" href="wishlist.html" aria-label="Wishlist">
+              <span aria-hidden="true">♡</span>
+              <span class="icon-badge__count" data-wishlist-count>0</span>
+            </a>
+            <a class="icon-button icon-badge" href="cart.html" aria-label="Shopping cart">
+              <span aria-hidden="true">🛒</span>
+              <span class="icon-badge__count" data-cart-count>0</span>
+            </a>
+            <button class="icon-button mobile-toggle" type="button" aria-label="Open menu" aria-expanded="false">☰</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="page-banner">
+        <div class="container page-banner__content">
+          <p class="eyebrow">Curated edit</p>
+          <h1 class="page-banner__title">Shop the collection</h1>
+          <div class="breadcrumbs" aria-label="Breadcrumb">
+            <a href="index.html">Home</a>
+            <span> / </span>
+            <span>Shop</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section--tight">
+        <div class="container shop-layout">
+          <aside class="filter-panel" aria-label="Filters">
+            <div class="filter-group">
+              <label for="categoryFilter">Category</label>
+              <select id="categoryFilter">
+                <option value="all">All categories</option>
+                <option value="Handbags">Handbags</option>
+                <option value="Dresses">Dresses</option>
+                <option value="Jewelry">Jewelry</option>
+                <option value="Perfume">Perfume</option>
+                <option value="Home Decor">Home Decor</option>
+                <option value="Candles">Candles</option>
+                <option value="Accessories">Accessories</option>
+                <option value="Gifts">Gifts</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label for="priceFilter">Max price</label>
+              <input id="priceFilter" type="range" min="50" max="500" step="10" value="500" />
+              <div class="text-muted">Up to 500 DT</div>
+            </div>
+
+            <div class="filter-group">
+              <span class="field-label">Sort by</span>
+              <select id="sortFilter">
+                <option value="featured">Featured</option>
+                <option value="popular">Popularity</option>
+                <option value="price-low">Price: low to high</option>
+                <option value="price-high">Price: high to low</option>
+              </select>
+            </div>
+          </aside>
+
+          <div>
+            <div class="filter-toolbar">
+              <div class="toolbar-meta"><span data-results-count>0 products</span></div>
+            </div>
+            <div class="product-grid product-grid--shop" data-shop-grid></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="footer-grid">
+          <div>
+            <div class="footer-brand">Avielle</div>
+            <p>Thoughtful essentials for a life well styled.</p>
+          </div>
+          <div>
+            <h3>Shop</h3>
+            <ul class="footer-nav">
+              <li><a href="shop.html">All products</a></li>
+              <li><a href="categories.html">Categories</a></li>
+              <li><a href="faq.html">FAQ</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3>About</h3>
+            <ul class="footer-links">
+              <li><a href="about.html">Our story</a></li>
+              <li><a href="contact.html">Contact</a></li>
+              <li><a href="admin.html">Admin</a></li>
+              <li><a href="wishlist.html">Wishlist</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3>Follow</h3>
+            <ul class="footer-links">
+              <li><a href="https://instagram.com" target="_blank" rel="noreferrer">Instagram</a></li>
+              <li><a href="https://pinterest.com" target="_blank" rel="noreferrer">Pinterest</a></li>
+              <li><a href="https://facebook.com" target="_blank" rel="noreferrer">Facebook</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="footer-meta">
+          <span>© 2026 Avielle</span>
+          <span>Privacy Policy • Terms & Conditions</span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,32 @@
+{
+  "name": "avielle",
+  "version": "1.0.0",
+  "description": "Avielle luxury e-commerce storefront with protected admin dashboard.",
+  "main": "server.js",
+  "engines": {
+    "node": ">=20 <24"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "avielle",
+    "ecommerce",
+    "express",
+    "sqlite"
+  ],
+  "author": "Avielle",
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^9.6.0",
+    "better-sqlite3-session-store": "^0.1.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "express-session": "^1.18.1",
+    "helmet": "^8.0.0",
+    "multer": "^2.0.2",
+    "express-rate-limit": "^7.4.1"
+  }
+}

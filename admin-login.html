@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Avielle Admin Login</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --bg: #f7f2ed;
+        --panel: rgba(255, 255, 255, 0.78);
+        --ink: #1d1a17;
+        --muted: #5a514b;
+        --border: rgba(32, 26, 22, 0.08);
+        --gold: #b79d72;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: linear-gradient(135deg, #f4eee9, #efe4dc);
+        font-family: "Manrope", Arial, sans-serif;
+        color: var(--ink);
+        display: grid;
+        place-items: center;
+      }
+      .login-card {
+        width: min(480px, calc(100% - 2rem));
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 28px;
+        padding: 2rem;
+        box-shadow: 0 18px 35px rgba(32, 26, 22, 0.08);
+      }
+      .brand {
+        text-align: center;
+        margin-bottom: 1.4rem;
+      }
+      .brand-mark {
+        display: inline-grid;
+        place-items: center;
+        width: 54px;
+        height: 54px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--gold), #ddd3bf);
+        font-family: "Cormorant Garamond", serif;
+        font-size: 2rem;
+        margin-bottom: 0.7rem;
+      }
+      h1 {
+        margin: 0;
+        font-size: 2rem;
+        font-family: "Cormorant Garamond", serif;
+      }
+      .subtitle {
+        color: var(--muted);
+        text-align: center;
+        margin: 0.4rem 0 1.75rem;
+      }
+      form {
+        display: grid;
+        gap: 1rem;
+      }
+      label {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: var(--muted);
+      }
+      input {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 0.85rem 0.9rem;
+        font: inherit;
+      }
+      button {
+        margin-top: 0.3rem;
+        border: none;
+        border-radius: 999px;
+        padding: 0.95rem 1.3rem;
+        background: #1d1a17;
+        color: white;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .error {
+        color: #8b4136;
+        min-height: 1.2rem;
+        font-size: 0.9rem;
+      }
+      .link-back {
+        text-align: center;
+        margin-top: 1rem;
+        font-size: 0.9rem;
+      }
+      a { color: var(--ink); }
+    </style>
+  </head>
+  <body>
+    <div class="login-card">
+      <div class="brand">
+        <div class="brand-mark">A</div>
+        <h1>Avielle Admin</h1>
+      </div>
+      <p class="subtitle">Secure access to the Avielle dashboard</p>
+
+      <form id="admin-login-form">
+        <div>
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" placeholder="admin@avielle.com" required />
+        </div>
+        <div>
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" placeholder="Enter password" required />
+        </div>
+        <div class="error" id="login-error"></div>
+        <button type="submit">Sign in</button>
+      </form>
+
+      <div class="link-back">
+        <a href="/">Back to public store</a>
+      </div>
+    </div>
+
+    <script>
+      const form = document.getElementById('admin-login-form');
+      const errorBox = document.getElementById('login-error');
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        errorBox.textContent = '';
+        const payload = {
+          email: document.getElementById('email').value.trim(),
+          password: document.getElementById('password').value
+        };
+
+        try {
+          const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const result = await response.json();
+
+          if (!response.ok || !result.success) {
+            throw new Error(result.message || 'Invalid login details.');
+          }
+
+          window.location.href = '/admin';
+        } catch (error) {
+          errorBox.textContent = error.message || 'Login failed.';
+        }
+      });
+    </script>
+  </body>
+</html>

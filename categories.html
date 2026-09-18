@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Explore Avielle categories including fashion, handbags, beauty, home decor, candles, jewelry, accessories, and gifts." />
+    <meta property="og:title" content="Avielle Categories" />
+    <meta property="og:description" content="Browse beautifully curated categories for luxury living." />
+    <meta property="og:type" content="website" />
+    <title>Categories | Avielle</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="css/style.css" />
+    <script src="js/products.js" defer></script>
+    <script src="js/search.js" defer></script>
+    <script src="js/app.js" defer></script>
+    <script src="js/cart.js" defer></script>
+    <script src="js/wishlist.js" defer></script>
+  </head>
+  <body data-page="categories">
+    <header class="site-header">
+      <div class="container header-inner">
+        <a href="index.html" class="brand" aria-label="Avielle home page">
+          <span class="brand-mark">A</span>
+          <span>Avielle</span>
+        </a>
+        <nav class="main-nav" aria-label="Main navigation">
+          <a href="index.html">Home</a>
+          <a href="shop.html">Shop</a>
+          <a class="is-active" href="categories.html">Categories</a>
+          <a href="about.html">About</a>
+          <a href="contact.html">Contact</a>
+        </nav>
+        <div class="header-tools">
+          <form class="search-form searchbox" role="search" aria-label="Site search">
+            <span aria-hidden="true">⌕</span>
+            <input type="search" name="search" placeholder="Search" aria-label="Search products" />
+          </form>
+          <div class="nav-actions">
+            <a class="icon-button icon-badge" href="wishlist.html" aria-label="Wishlist">
+              <span aria-hidden="true">♡</span>
+              <span class="icon-badge__count" data-wishlist-count>0</span>
+            </a>
+            <a class="icon-button icon-badge" href="cart.html" aria-label="Shopping cart">
+              <span aria-hidden="true">🛒</span>
+              <span class="icon-badge__count" data-cart-count>0</span>
+            </a>
+            <button class="icon-button mobile-toggle" type="button" aria-label="Open menu" aria-expanded="false">☰</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="page-banner">
+        <div class="container page-banner__content">
+          <p class="eyebrow">Room to explore</p>
+          <h1 class="page-banner__title">Shop by category</h1>
+          <div class="breadcrumbs">
+            <a href="index.html">Home</a>
+            <span> / </span>
+            <span>Categories</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section--tight">
+        <div class="container">
+          <div class="category-grid category-grid--layout">
+            <a class="category-tile" href="shop.html?category=Handbags">
+              <div class="category-card__image" style="background-image:url('https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=900&q=80');"></div>
+              <h3>Handbags</h3>
+            </a>
+            <a class="category-tile" href="shop.html?category=Dresses">
+              <div class="category-card__image" style="background-image:url('https://images.unsplash.com/photo-1496747611176-843222e1e57c?auto=format&fit=crop&w=900&q=80');"></div>
+              <h3>Dresses</h3>
+            </a>
+            <a class="category-tile" href="shop.html?category=Jewelry">
+              <div class="category-card__image" style="background-image:url('https://images.unsplash.com/photo-1617038220319-276d3cfab638?auto=format&fit=crop&w=900&q=80');"></div>
+              <h3>Jewelry</h3>
+            </a>
+            <a class="category-tile" href="shop.html?category=Perfume">
+              <div class="category-card__image" style="background-image:url('https://images.unsplash.com/photo-1528740561666-dc2479dc08ab?auto=format&fit=crop&w=900&q=80');"></div>
+              <h3>Perfume</h3>
+            </a>
+            <a class="category-tile" href="shop.html?category=Home%20Decor">
+              <div class="category-card__image" style="background-image:url('https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=900&q=80');"></div>
+              <h3>Home Decor</h3>
+            </a>
+            <a class="category-tile" href="shop.html?category=Candles">
+              <div class="category-card__image" style="background-image:url('https://images.unsplash.com/photo-1602872029705-7b5f7c1ea9d0?auto=format&fit=crop&w=900&q=80');"></div>
+              <h3>Candles</h3>
+            </a>
+            <a class="category-tile" href="shop.html?category=Accessories">
+              <div class="category-card__image" style="background-image:url('https://images.unsplash.com/photo-1627123424574-724758594e93?auto=format&fit=crop&w=900&q=80');"></div>
+              <h3>Accessories</h3>
+            </a>
+            <a class="category-tile" href="shop.html?category=Gifts">
+              <div class="category-card__image" style="background-image:url('https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=900&q=80');"></div>
+              <h3>Gifts</h3>
+            </a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="footer-grid">
+          <div>
+            <div class="footer-brand">Avielle</div>
+            <p>Thoughtful essentials for a life well styled.</p>
+          </div>
+          <div>
+            <h3>Shop</h3>
+            <ul class="footer-nav">
+              <li><a href="shop.html">All products</a></li>
+              <li><a href="categories.html">Categories</a></li>
+              <li><a href="faq.html">FAQ</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3>About</h3>
+            <ul class="footer-links">
+              <li><a href="about.html">Our story</a></li>
+              <li><a href="contact.html">Contact</a></li>
+              <li><a href="wishlist.html">Wishlist</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3>Follow</h3>
+            <ul class="footer-links">
+              <li><a href="https://instagram.com" target="_blank" rel="noreferrer">Instagram</a></li>
+              <li><a href="https://pinterest.com" target="_blank" rel="noreferrer">Pinterest</a></li>
+              <li><a href="https://facebook.com" target="_blank" rel="noreferrer">Facebook</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="footer-meta">
+          <span>© 2026 Avielle</span>
+          <span>Privacy Policy • Terms & Conditions</span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

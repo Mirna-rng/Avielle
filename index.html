@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Avielle is a refined online marketplace for elevated fashion, luxury accessories, beauty, home essentials, and thoughtful gifts." />
+    <meta property="og:title" content="Avielle | Quiet Luxury for Everyday Living" />
+    <meta property="og:description" content="Discover premium fashion, home, beauty, and gift essentials curated for a beautifully considered lifestyle." />
+    <meta property="og:type" content="website" />
+    <title>Avielle | Quiet Luxury for Everyday Living</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="css/style.css" />
+    <script src="js/products.js" defer></script>
+    <script src="js/store.js" defer></script>
+    <script src="js/search.js" defer></script>
+    <script src="js/app.js" defer></script>
+    <script src="js/cart.js" defer></script>
+    <script src="js/wishlist.js" defer></script>
+  </head>
+  <body data-page="home">
+    <header class="site-header">
+      <div class="container header-inner">
+        <a href="index.html" class="brand" aria-label="Avielle home page">
+          <span class="brand-mark">A</span>
+          <span>Avielle</span>
+        </a>
+
+        <nav class="main-nav" aria-label="Main navigation">
+          <a class="is-active" href="index.html">Home</a>
+          <a href="shop.html">Shop</a>
+          <a href="categories.html">Categories</a>
+          <a href="about.html">About</a>
+          <a href="contact.html">Contact</a>
+          <a href="admin.html">Admin</a>
+        </nav>
+
+        <div class="header-tools">
+          <form class="search-form searchbox" role="search" aria-label="Site search">
+            <span aria-hidden="true">⌕</span>
+            <input type="search" name="search" placeholder="Search" aria-label="Search products" />
+          </form>
+
+          <div class="nav-actions">
+            <a class="icon-button icon-badge" href="wishlist.html" aria-label="Wishlist">
+              <span aria-hidden="true">♡</span>
+              <span class="icon-badge__count" data-wishlist-count>0</span>
+            </a>
+            <a class="icon-button icon-badge" href="cart.html" aria-label="Shopping cart">
+              <span aria-hidden="true">🛒</span>
+              <span class="icon-badge__count" data-cart-count>0</span>
+            </a>
+            <a class="icon-button" href="about.html" aria-label="Account">👤</a>
+            <button class="icon-button mobile-toggle" type="button" aria-label="Open menu" aria-expanded="false">☰</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="container hero__inner">
+          <div class="hero__content">
+            <p class="eyebrow">Curated for elegant living</p>
+            <h1 class="hero__title">Luxury made personal.</h1>
+            <p class="hero__text">Avielle brings together refined fashion, beauty, home treasures, and thoughtful gifting in one beautifully considered collection.</p>
+            <div class="hero__actions">
+              <a class="btn btn--primary" href="shop.html">Shop Now</a>
+              <a class="btn btn--secondary" href="categories.html">Explore Categories</a>
+            </div>
+          </div>
+          <div class="hero__media">
+            <div class="hero-card">
+              <img src="https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1200&q=80" alt="Woman in luxury attire wearing elegant neutral tones" />
+            </div>
+            <div class="hero-floating">
+              <span class="eyebrow">New Season</span>
+              <strong>Quiet luxury, reimagined.</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section--tight">
+        <div class="container">
+          <p class="eyebrow">Featured categories</p>
+          <div class="category-grid">
+            <article class="category-card">
+              <div class="category-card__image" style="background-image:url('https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=900&q=80');"></div>
+              <h3>Fashion</h3>
+              <p>Soft tailoring, elevated layers, and modern essentials.</p>
+            </article>
+            <article class="category-card">
+              <div class="category-card__image" style="background-image:url('https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=900&q=80');"></div>
+              <h3>Handbags</h3>
+              <p>Artful carries designed for everyday elegance.</p>
+            </article>
+            <article class="category-card">
+              <div class="category-card__image" style="background-image:url('https://images.unsplash.com/photo-1528740561666-dc2479dc08ab?auto=format&fit=crop&w=900&q=80');"></div>
+              <h3>Beauty</h3>
+              <p>Fragrances and rituals that feel quietly indulgent.</p>
+            </article>
+            <article class="category-card">
+              <div class="category-card__image" style="background-image:url('https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=900&q=80');"></div>
+              <h3>Home</h3>
+              <p>Thoughtful pieces that make a room feel complete.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="container">
+          <div class="filter-toolbar">
+            <div>
+              <p class="eyebrow">New arrivals</p>
+              <h2 class="heading">Freshly curated</h2>
+            </div>
+            <a href="shop.html" class="btn btn--secondary">View all</a>
+          </div>
+          <div class="product-grid" data-home-new></div>
+        </div>
+      </section>
+
+      <section class="section section--tight">
+        <div class="container">
+          <div class="filter-toolbar">
+            <div>
+              <p class="eyebrow">Bestsellers</p>
+              <h2 class="heading">Shop the essentials</h2>
+            </div>
+            <a href="shop.html" class="btn btn--secondary">Shop more</a>
+          </div>
+          <div class="product-grid" data-home-best></div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="container">
+          <div class="promo">
+            <div class="promo-grid">
+              <div class="promo-panel">
+                <p class="eyebrow">Limited time</p>
+                <h2 class="heading">A softer way to gift beautifully.</h2>
+                <p class="lead">Explore our curated gift edit, thoughtfully wrapped and ready to delight.</p>
+                <div class="hero__actions">
+                  <a href="shop.html" class="btn btn--primary">Discover Gift Edit</a>
+                </div>
+              </div>
+              <div class="promo-panel__image" style="background-image:url('https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=1000&q=80');"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section--tight">
+        <div class="container">
+          <div class="filter-toolbar">
+            <div>
+              <p class="eyebrow">Featured products</p>
+              <h2 class="heading">Everyday luxury</h2>
+            </div>
+            <a href="shop.html" class="btn btn--secondary">See all styles</a>
+          </div>
+          <div class="product-grid" data-home-featured></div>
+        </div>
+      </section>
+
+      <section class="section section--tight">
+        <div class="container">
+          <div class="stats-grid">
+            <article class="feature-card">
+              <div class="feature-card__icon">✦</div>
+              <h3>Thoughtful curation</h3>
+              <p>Every item is selected for craftsmanship, versatility, and beauty.</p>
+            </article>
+            <article class="feature-card">
+              <div class="feature-card__icon">✓</div>
+              <h3>Premium quality</h3>
+              <p>We partner with makers who value intentional design and lasting materials.</p>
+            </article>
+            <article class="feature-card">
+              <div class="feature-card__icon">✉</div>
+              <h3>Fast delivery</h3>
+              <p>Enjoy complimentary shipping on curated orders above the threshold.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section--tight">
+        <div class="container">
+          <p class="eyebrow">Why Avielle</p>
+          <h2 class="heading">The details are everything.</h2>
+          <div class="reason-grid" style="margin-top: 2rem;">
+            <article class="info-card">
+              <h3>Elegant styling</h3>
+              <p>Build a wardrobe and home that feel intentional, calm, and elevated.</p>
+            </article>
+            <article class="info-card">
+              <h3>Easy gifting</h3>
+              <p>Thoughtful selections that feel special from the very first glance.</p>
+            </article>
+            <article class="info-card">
+              <h3>Modern heritage</h3>
+              <p>Classic inspiration with a cleaner, more contemporary point of view.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section--tight">
+        <div class="container">
+          <p class="eyebrow">Client notes</p>
+          <h2 class="heading">Loved by our community</h2>
+          <div class="testimonial-grid" style="margin-top: 2rem;">
+            <article class="testimonial">
+              <p class="testimonial__quote">“The pieces feel effortlessly refined. I always get compliments on my bag and jewelry.”</p>
+              <strong>Amelia T.</strong>
+            </article>
+            <article class="testimonial">
+              <p class="testimonial__quote">“The quality is exceptional and the gifting service feels premium from start to finish.”</p>
+              <strong>Sophia L.</strong>
+            </article>
+            <article class="testimonial">
+              <p class="testimonial__quote">“Avielle has a way of making everyday rituals feel elevated and luxurious.”</p>
+              <strong>Charlotte M.</strong>
+            </article>
+            <article class="testimonial">
+              <p class="testimonial__quote">“Beautiful edit, excellent service, and the kind of pieces I want to keep forever.”</p>
+              <strong>Ella R.</strong>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section--tight">
+        <div class="container">
+          <div class="newsletter">
+            <div>
+              <p class="eyebrow">Join the list</p>
+              <h2 class="heading">Receive our latest finds.</h2>
+            </div>
+            <form class="newsletter__form" aria-label="Newsletter signup">
+              <input type="email" aria-label="Email address" placeholder="Your email address" />
+              <button class="btn btn--primary" type="submit">Subscribe</button>
+            </form>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="footer-grid">
+          <div>
+            <div class="footer-brand">Avielle</div>
+            <p>Thoughtful essentials for a life well styled.</p>
+          </div>
+          <div>
+            <h3>Shop</h3>
+            <ul class="footer-nav">
+              <li><a href="shop.html">All products</a></li>
+              <li><a href="categories.html">Categories</a></li>
+              <li><a href="faq.html">FAQ</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3>About</h3>
+            <ul class="footer-links">
+              <li><a href="about.html">Our story</a></li>
+              <li><a href="contact.html">Contact</a></li>
+              <li><a href="admin.html">Admin</a></li>
+              <li><a href="wishlist.html">Wishlist</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3>Follow</h3>
+            <ul class="footer-links">
+              <li><a href="https://instagram.com" target="_blank" rel="noreferrer">Instagram</a></li>
+              <li><a href="https://pinterest.com" target="_blank" rel="noreferrer">Pinterest</a></li>
+              <li><a href="https://facebook.com" target="_blank" rel="noreferrer">Facebook</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="footer-meta">
+          <span>© 2026 Avielle</span>
+          <span>Privacy Policy • Terms & Conditions</span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: avielle
+    runtime: docker
+    plan: starter
+    healthCheckPath: /health
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATA_DIR
+        value: /app/storage/data
+      - key: UPLOADS_DIR
+        value: /app/storage/uploads
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+    disk:
+      name: avielle-storage
+      mountPath: /app/storage
+      sizeGB: 1
