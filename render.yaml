@@ -20,6 +20,10 @@ services:
         sync: false
       - key: SESSION_SECRET
         generateValue: true
+      - key: LIVE_SITE_URL
+        value: https://avielle.onrender.com
+      - key: LIVE_SYNC_TOKEN
+        sync: false
     disk:
       name: avielle-storage
       mountPath: /app/storage

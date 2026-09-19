@@ -20,6 +20,8 @@ const dataDir = process.env.DATA_DIR || path.join(rootDir, 'data');
 const uploadsDir = process.env.UPLOADS_DIR || path.join(rootDir, 'uploads');
 const adminEmail = (process.env.ADMIN_EMAIL || 'majdboughanmi012@gmail.com').trim().toLowerCase();
 const adminPassword = process.env.ADMIN_PASSWORD || '33070';
+const liveSiteUrl = String(process.env.LIVE_SITE_URL || '').trim().replace(/\/$/, '');
+const liveSyncToken = String(process.env.LIVE_SYNC_TOKEN || '').trim();
 
 fs.mkdirSync(dataDir, { recursive: true });
 fs.mkdirSync(uploadsDir, { recursive: true });
@@ -819,6 +821,51 @@ app.post('/api/auth/logout', (req, res) => {
   });
 });
 
+app.post('/api/internal/sync/product', (req, res) => {
+  if (!liveSyncToken || req.get('x-avielle-sync-token') !== liveSyncToken) {
+    return jsonError(res, 401, 'Invalid live sync token.');
+  }
+
+  const input = req.body || {};
+  const name = String(input.name || '').trim();
+  const slug = slugify(input.slug || name);
+  const price = Number(input.price);
+  const stock = Number(input.stock);
+  const status = ['draft', 'published', 'archived'].includes(input.status) ? input.status : 'published';
+
+  if (!name || !slug || !Number.isFinite(price) || price <= 0 || !Number.isInteger(stock) || stock < 0) {
+    return jsonError(res, 400, 'Invalid product data for live sync.');
+  }
+
+  try {
+    const categoryName = String(input.category || '').trim();
+    let categoryId = null;
+    if (categoryName) {
+      let category = db.prepare('SELECT id FROM categories WHERE name = ?').get(categoryName);
+      if (!category) {
+        const categoryResult = db.prepare('INSERT INTO categories (name, slug, active, sort_order, created_at, updated_at) VALUES (?, ?, 1, 0, datetime("now"), datetime("now"))').run(categoryName, slugify(categoryName));
+        category = { id: categoryResult.lastInsertRowid };
+      }
+      categoryId = category.id;
+    }
+
+    const existing = db.prepare('SELECT id FROM products WHERE slug = ?').get(slug);
+    const values = [name, slug, categoryId, price, input.salePrice == null ? null : Number(input.salePrice), String(input.description || '').trim(), stock, status === 'published' ? 1 : 0, status, String(input.sku || '').trim(), String(input.brand || '').trim(), Array.isArray(input.tags) ? input.tags.join(', ') : String(input.tags || ''), input.image || '', new Date().toISOString()];
+    const productId = existing
+      ? (db.prepare('UPDATE products SET name = ?, slug = ?, category_id = ?, price = ?, sale_price = ?, description = ?, stock = ?, active = ?, status = ?, sku = ?, brand = ?, tags = ?, image = ?, updated_at = ? WHERE id = ?').run(...values, existing.id), existing.id)
+      : db.prepare('INSERT INTO products (name, slug, category_id, price, sale_price, description, stock, active, status, sku, brand, tags, image, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime("now"), ?)').run(...values).lastInsertRowid;
+
+    if (input.image) {
+      db.prepare('DELETE FROM product_images WHERE product_id = ?').run(productId);
+      db.prepare('INSERT INTO product_images (product_id, image_url, sort_order, is_primary, created_at) VALUES (?, ?, 0, 1, datetime("now"))').run(productId, String(input.image));
+    }
+
+    return res.json({ success: true, product: serializeProduct(adminProductRow(productId)) });
+  } catch (error) {
+    return jsonError(res, 400, error.message || 'Unable to sync product.');
+  }
+});
+
 app.get('/api/categories', (_, res) => {
   const categories = db.prepare('SELECT * FROM categories WHERE active = 1 ORDER BY sort_order ASC, id ASC').all();
   res.json({ success: true, categories });
@@ -1223,6 +1270,31 @@ app.get('/api/admin/catalog/products', authRequired, (req, res) => {
     ORDER BY p.updated_at DESC, p.id DESC
   `).all(search, `%${search}%`, `%${search}%`, categoryId, categoryId, categoryId, stockStatus, stockStatus, stockStatus, stockStatus);
   res.json({ success: true, products: rows.map(serializeProduct) });
+});
+
+app.post('/api/admin/catalog/products/:id/publish-live', authRequired, async (req, res) => {
+  if (!liveSiteUrl || !liveSyncToken) {
+    return jsonError(res, 400, 'Configure LIVE_SITE_URL and LIVE_SYNC_TOKEN before publishing to Render.');
+  }
+
+  const product = adminProductRow(Number(req.params.id));
+  if (!product) return jsonError(res, 404, 'Product not found.');
+
+  try {
+    const response = await fetch(`${liveSiteUrl}/api/internal/sync/product`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Avielle-Sync-Token': liveSyncToken
+      },
+      body: JSON.stringify(serializeProduct(product))
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) return jsonError(res, response.status, result.message || 'Render rejected the product sync.');
+    return res.json({ success: true, message: 'Product published to Render.', product: result.product });
+  } catch (error) {
+    return jsonError(res, 502, `Unable to reach Render: ${error.message}`);
+  }
 });
 
 app.post('/api/admin/catalog/products', authRequired, upload.fields([{ name: 'images', maxCount: 30 }, { name: 'videos', maxCount: 10 }]), (req, res) => {
