@@ -1,205 +1,63 @@
-document.addEventListener("DOMContentLoaded", async () => {
-  if (document.body.dataset.page !== "admin") {
-    return;
-  }
+document.addEventListener("DOMContentLoaded", () => {
+  if (document.body.dataset.page !== "admin") return;
 
-  const form = document.getElementById("product-form");
-  const list = document.getElementById("admin-product-list");
-  const submitButton = document.getElementById("product-submit-btn");
-  const resetButton = document.getElementById("product-reset-btn");
-  const productIdField = document.getElementById("product-id");
-  const websiteForm = document.getElementById("website-form");
+  const state = { products: [], categories: [], editingProduct: null, editingCategory: null };
+  const $ = (selector) => document.querySelector(selector);
+  const all = (selector) => [...document.querySelectorAll(selector)];
+  const escapeHtml = (value) => String(value ?? "").replace(/[&<>\"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[character]));
+  const slugify = (value) => String(value || "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const notify = (message, type = "success") => { const element = $("#admin-notice"); element.textContent = message; element.className = `admin-notice is-visible ${type}`; setTimeout(() => element.classList.remove("is-visible"), 4000); };
 
-  if (!form || !list || !submitButton || !resetButton || !productIdField) {
-    return;
-  }
-
-  let editingProductId = null;
-  let products = [];
-
-  function resetForm() {
-    form.reset();
-    productIdField.value = "";
-    editingProductId = null;
-    submitButton.textContent = "Add Product";
-    document.getElementById("product-form-title").textContent = "Add product";
-    document.getElementById("product-category").value = "Handbags";
-  }
-
-  function renderProducts() {
-    if (!products.length) {
-      list.innerHTML = `
-        <div class="empty-admin-state">
-          <h3>No products yet.</h3>
-          <p>Add your first Avielle product to begin curating the shop.</p>
-        </div>
-      `;
-      return;
-    }
-
-    list.innerHTML = products.map((product) => `
-      <article class="admin-product-item">
-        <img src="${product.image || "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1200&q=80"}" alt="${product.alt || product.name}" />
-        <div class="admin-product-item__meta">
-          <h3>${product.name}</h3>
-          <p>${product.category || "General"} · ${formatPrice(product.price || 0)} · Stock: ${product.stock || 0}</p>
-          <p>${product.description || ""}</p>
-        </div>
-        <div class="admin-product-item__actions">
-          <button class="btn--ghost" type="button" data-admin-action="edit" data-product-id="${product.id}">Edit</button>
-          <button class="btn--danger" type="button" data-admin-action="delete" data-product-id="${product.id}">Delete</button>
-        </div>
-      </article>
-    `).join("");
-  }
-
-  function populateForm(product) {
-    document.getElementById("product-name").value = product.name || "";
-    document.getElementById("product-price").value = product.price || 0;
-    document.getElementById("product-category").value = product.category || "Handbags";
-    document.getElementById("product-image").value = product.image || "";
-    document.getElementById("product-stock").value = product.stock || 0;
-    document.getElementById("product-description").value = product.description || "";
-    productIdField.value = String(product.id);
-    editingProductId = Number(product.id);
-    submitButton.textContent = "Update Product";
-    document.getElementById("product-form-title").textContent = "Edit product";
-  }
-
-  async function apiRequest(url, options = {}) {
-    const headers = { ...(options.headers || {}) };
-    if (!(options.body instanceof FormData) && !headers['Content-Type']) {
-      headers['Content-Type'] = 'application/json';
-    }
-
-    const response = await fetch(url, {
-      credentials: "same-origin",
-      ...options,
-      headers
-    });
-
+  async function request(url, options = {}) {
+    const headers = options.body instanceof FormData ? {} : { "Content-Type": "application/json" };
+    const response = await fetch(url, { credentials: "same-origin", ...options, headers: { ...headers, ...(options.headers || {}) } });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(data.message || 'Request failed.');
-    }
+    if (!response.ok) throw new Error(data.message || "Request failed.");
     return data;
   }
 
-  async function loadProducts() {
-    try {
-      const data = await apiRequest('/api/admin/products');
-      products = Array.isArray(data.products) ? data.products : [];
-      renderProducts();
-      window.avielleProducts = products;
-    } catch (error) {
-      list.innerHTML = `<div class="empty-admin-state"><h3>Unable to load products.</h3><p>${error.message}</p></div>`;
-    }
+  function renderCategoryOptions(selected = []) {
+    const selectedIds = selected.map(Number);
+    $("#product-category-options").innerHTML = state.categories.map((category) => `<label class="admin-check"><input type="checkbox" value="${category.id}" ${selectedIds.includes(category.id) ? "checked" : ""}><span>${escapeHtml(category.name)}</span></label>`).join("") || `<p class="admin-muted">Create a category first.</p>`;
+    const editingId = state.editingCategory?.id;
+    $("#category-parent").innerHTML = `<option value="">No parent</option>${state.categories.filter((category) => category.id !== editingId).map((category) => `<option value="${category.id}">${escapeHtml(category.name)}</option>`).join("")}`;
+    $("#product-filter-category").innerHTML = `<option value="">All categories</option>${state.categories.map((category) => `<option value="${category.id}">${escapeHtml(category.name)}</option>`).join("")}`;
   }
 
-  async function loadWebsiteSettings() {
-    if (!websiteForm) {
-      return;
-    }
-
-    try {
-      const data = await apiRequest('/api/admin/website');
-      document.getElementById("hero-headline").value = data.settings.hero_headline || "Luxury made personal.";
-      document.getElementById("hero-subtitle").value = data.settings.hero_subtitle || "";
-      document.getElementById("hero-image").value = data.settings.hero_image || "";
-    } catch (error) {
-      console.warn(error);
-    }
+  function renderCategories() {
+    const query = $("#category-search").value.trim().toLowerCase();
+    const categories = state.categories.filter((category) => category.name.toLowerCase().includes(query));
+    $("#category-count").textContent = state.categories.length;
+    $("#admin-category-list").innerHTML = categories.length ? `<table class="admin-table"><thead><tr><th>Category</th><th>Parent</th><th>Products</th><th>Status</th><th>Updated</th><th></th></tr></thead><tbody>${categories.map((category) => `<tr><td><div class="admin-media-cell">${category.image_url ? `<img src="${escapeHtml(category.image_url)}" alt="">` : `<span class="admin-media-placeholder">A</span>`}<div><strong>${escapeHtml(category.name)}</strong><small>${escapeHtml(category.slug)}</small></div></div></td><td>${escapeHtml(category.parent_name || "-")}</td><td>${category.product_count || 0}</td><td><span class="status-pill ${category.active ? "is-active" : "is-muted"}">${category.active ? "Active" : "Inactive"}</span></td><td>${new Date(category.updated_at).toLocaleDateString()}</td><td class="admin-row-actions"><button class="btn--ghost" type="button" data-admin-action="edit-category" data-category-id="${category.id}">Edit</button><button class="btn--danger" type="button" data-admin-action="delete-category" data-category-id="${category.id}">Delete</button></td></tr>`).join("")}</tbody></table>` : `<div class="empty-admin-state"><h3>No categories found.</h3><p>Create a category to organize your catalog.</p></div>`;
   }
 
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
-    const name = document.getElementById("product-name").value.trim();
-    const price = Number(document.getElementById("product-price").value);
-    const category = document.getElementById("product-category").value;
-    const image = document.getElementById("product-image").value.trim();
-    const stock = Number(document.getElementById("product-stock").value);
-    const description = document.getElementById("product-description").value.trim();
-
-    if (!name || !image || !description || !Number.isFinite(price) || price <= 0 || !Number.isFinite(stock) || stock < 0) {
-      alert("Please complete all product fields with a valid price and stock quantity.");
-      return;
-    }
-
-    try {
-      const payload = { name, price, category, image, stock, description, badge: "New" };
-      const formData = new FormData();
-      formData.append("product", JSON.stringify(payload));
-
-      const endpoint = editingProductId ? `/api/admin/products/${editingProductId}` : '/api/admin/products';
-      const method = editingProductId ? 'PUT' : 'POST';
-      const result = await apiRequest(endpoint, { method, body: formData });
-      await loadProducts();
-      resetForm();
-      if (result.product) {
-        window.dispatchEvent(new CustomEvent("avielle:products-loaded"));
-      }
-    } catch (error) {
-      alert(error.message || "Unable to save the product.");
-    }
-  });
-
-  document.addEventListener("click", async (event) => {
-    const button = event.target.closest("[data-admin-action]");
-    if (!button) {
-      return;
-    }
-
-    const productId = Number(button.dataset.productId);
-    const product = products.find((item) => item.id === productId);
-
-    if (!product) {
-      return;
-    }
-
-    if (button.dataset.adminAction === "edit") {
-      populateForm(product);
-      return;
-    }
-
-    if (button.dataset.adminAction === "delete") {
-      const confirmed = window.confirm(`Delete ${product.name}? This removes it from the shop immediately.`);
-      if (!confirmed) {
-        return;
-      }
-
-      try {
-        await apiRequest(`/api/admin/products/${productId}`, { method: "DELETE" });
-        await loadProducts();
-        if (editingProductId === productId) {
-          resetForm();
-        }
-        window.dispatchEvent(new CustomEvent("avielle:products-loaded"));
-      } catch (error) {
-        alert(error.message || "Unable to delete the product.");
-      }
-    }
-  });
-
-  if (websiteForm) {
-    websiteForm.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      try {
-        const payload = {
-          hero_headline: document.getElementById("hero-headline").value,
-          hero_subtitle: document.getElementById("hero-subtitle").value,
-          hero_image: document.getElementById("hero-image").value
-        };
-        await apiRequest('/api/admin/website', { method: 'POST', body: JSON.stringify(payload) });
-        alert('Website settings saved successfully.');
-      } catch (error) {
-        alert(error.message || 'Unable to update website settings.');
-      }
-    });
+  function renderProducts() {
+    $("#product-count").textContent = state.products.length;
+    $("#admin-product-list").innerHTML = state.products.length ? `<table class="admin-table"><thead><tr><th>Product</th><th>Price</th><th>Stock</th><th>Categories</th><th>Status</th><th>Updated</th><th></th></tr></thead><tbody>${state.products.map((product) => `<tr><td><div class="admin-media-cell"><img src="${escapeHtml(product.image || "")}" alt=""><div><strong>${escapeHtml(product.name)}</strong><small>${escapeHtml(product.sku || "No SKU")}</small></div></div></td><td>${Number(product.salePrice || product.price).toFixed(2)} ${product.salePrice ? `<small class="was-price">${Number(product.price).toFixed(2)}</small>` : ""}</td><td>${product.stock}</td><td>${escapeHtml(product.category_names || product.category || "-")}</td><td><span class="status-pill ${product.status === "published" ? "is-active" : "is-muted"}">${escapeHtml(product.status)}</span></td><td>${new Date(product.updated_at).toLocaleDateString()}</td><td class="admin-row-actions"><button class="btn--ghost" type="button" data-admin-action="edit-product" data-product-id="${product.id}">Edit</button><button class="btn--danger" type="button" data-admin-action="delete-product" data-product-id="${product.id}">Archive</button></td></tr>`).join("")}</tbody></table>` : `<div class="empty-admin-state"><h3>No products found.</h3><p>Add your first product to begin curating the shop.</p></div>`;
   }
 
-  resetButton.addEventListener("click", resetForm);
-  resetForm();
-  await loadProducts();
-  await loadWebsiteSettings();
+  async function loadCategories() { const data = await request(`/api/admin/categories?search=${encodeURIComponent($("#category-search").value)}`); state.categories = data.categories || []; renderCategoryOptions(); renderCategories(); }
+  async function loadProducts() { const params = new URLSearchParams({ search: $("#product-search").value, category_id: $("#product-filter-category").value, stock_status: $("#product-filter-stock").value }); const data = await request(`/api/admin/catalog/products?${params}`); state.products = data.products || []; renderProducts(); }
+  const setValue = (id, value) => { const element = $(`#${id}`); if (element) element.value = value ?? ""; };
+  function resetProductForm() { state.editingProduct = null; $("#product-form").reset(); $("#product-id").value = ""; $("#product-form-title").textContent = "Add product"; $("#product-image-preview").innerHTML = ""; $("#product-video-preview").innerHTML = ""; $("#product-video-urls").innerHTML = ""; renderCategoryOptions(); }
+  function closeEditors() { $("#product-editor").hidden = true; $("#category-editor").hidden = true; }
+  function preview(url, id, type) { return `<div class="media-item" data-media-id="${id}" data-media-type="${type}">${type === "video" ? `<video src="${escapeHtml(url)}" controls></video>` : `<img src="${escapeHtml(url)}" alt="">`}<button type="button" class="media-remove" data-admin-action="remove-media" data-media-id="${id}" data-media-type="${type}">Remove</button></div>`; }
+  function updateDiscount() { const price = Number($("#product-price").value); const sale = Number($("#product-sale-price").value); $("#product-discount").value = price > 0 && sale >= 0 && sale < price ? `${(((price - sale) / price) * 100).toFixed(1)}%` : ""; }
+  function openProductEditor(product = null) { resetProductForm(); state.editingProduct = product; $("#product-editor").hidden = false; $("#product-form-title").textContent = product ? `Edit ${product.name}` : "Add product"; if (!product) return; ["id", "name", "slug", "sku", "status", "price", "salePrice", "stock", "low_stock_threshold", "barcode", "description", "brand", "weight", "dimensions", "meta_title", "meta_description", "meta_keywords"].forEach((field) => setValue(`product-${field === "id" ? "id" : field.replaceAll("_", "-")}`, product[field])); setValue("product-tags", product.tags.join(", ")); renderCategoryOptions(product.category_ids); $("#product-image-preview").innerHTML = product.images.map((image) => preview(image.image_url, image.id, "image")).join(""); $("#product-video-preview").innerHTML = product.videos.map((video) => preview(video.url, video.id, "video")).join(""); updateDiscount(); }
+  function openCategoryEditor(category = null) { state.editingCategory = category; $("#category-editor").hidden = false; $("#category-form").reset(); $("#category-form-title").textContent = category ? `Edit ${category.name}` : "Add category"; renderCategoryOptions(); if (category) { setValue("category-id", category.id); setValue("category-name", category.name); setValue("category-slug", category.slug); setValue("category-parent", category.parent_id); setValue("category-active", category.active ? "true" : "false"); setValue("category-description", category.description); $("#category-image-preview").innerHTML = category.image_url ? preview(category.image_url, category.id, "image") : ""; } }
+  function addVideoUrl() { const row = document.createElement("div"); row.className = "dynamic-row"; row.innerHTML = `<input type="url" class="product-video-url" placeholder="https://youtube.com/..." required><button type="button" class="btn--danger" data-admin-action="remove-video-url">Remove</button>`; $("#product-video-urls").append(row); }
+
+  $("#product-name").addEventListener("input", (event) => { if (!$("#product-id").value) $("#product-slug").value = slugify(event.target.value); });
+  $("#category-name").addEventListener("input", (event) => { if (!$("#category-id").value) $("#category-slug").value = slugify(event.target.value); });
+  $("#product-price").addEventListener("input", updateDiscount); $("#product-sale-price").addEventListener("input", updateDiscount);
+  $("#product-search").addEventListener("input", loadProducts); $("#product-filter-category").addEventListener("change", loadProducts); $("#product-filter-stock").addEventListener("change", loadProducts); $("#category-search").addEventListener("input", loadCategories);
+  $("#product-images").addEventListener("change", (event) => { $("#product-image-preview").innerHTML = [...event.target.files].map((file) => `<div class="media-item"><img src="${URL.createObjectURL(file)}" alt=""><small>${escapeHtml(file.name)}</small></div>`).join(""); });
+  $("#product-videos").addEventListener("change", (event) => { $("#product-video-preview").innerHTML = [...event.target.files].map((file) => `<div class="media-item"><video src="${URL.createObjectURL(file)}" controls></video><small>${escapeHtml(file.name)}</small></div>`).join(""); });
+
+  $("#product-form").addEventListener("submit", async (event) => { event.preventDefault(); const price = Number($("#product-price").value); const sale = $("#product-sale-price").value === "" ? null : Number($("#product-sale-price").value); if (sale !== null && sale > price) return notify("Discounted price cannot exceed the original price.", "error"); const payload = { name: $("#product-name").value.trim(), slug: $("#product-slug").value.trim(), sku: $("#product-sku").value.trim(), status: $("#product-status").value, price, salePrice: sale, stock: Number($("#product-stock").value), lowStockThreshold: $("#product-threshold").value, barcode: $("#product-barcode").value.trim(), description: $("#product-description").value.trim(), categoryIds: all("#product-category-options input:checked").map((input) => Number(input.value)), brand: $("#product-brand").value.trim(), tags: $("#product-tags").value.split(",").map((tag) => tag.trim()).filter(Boolean), weight: $("#product-weight").value, dimensions: $("#product-dimensions").value.trim(), metaTitle: $("#product-meta-title").value.trim(), metaDescription: $("#product-meta-description").value.trim(), metaKeywords: $("#product-meta-keywords").value.trim(), videoUrls: all(".product-video-url").map((input) => input.value.trim()).filter(Boolean), removeImageIds: all("[data-remove-image-id]").map((element) => Number(element.dataset.removeImageId)), removeVideoIds: all("[data-remove-video-id]").map((element) => Number(element.dataset.removeVideoId)) }; const formData = new FormData(); formData.append("product", JSON.stringify(payload)); [...$("#product-images").files].forEach((file) => formData.append("images", file)); [...$("#product-videos").files].forEach((file) => formData.append("videos", file)); try { const endpoint = state.editingProduct ? `/api/admin/catalog/products/${state.editingProduct.id}` : "/api/admin/catalog/products"; await request(endpoint, { method: state.editingProduct ? "PUT" : "POST", body: formData }); notify("Product saved successfully."); await loadProducts(); if (event.submitter?.id === "product-save-another") resetProductForm(); else closeEditors(); } catch (error) { notify(error.message, "error"); } });
+  $("#category-form").addEventListener("submit", async (event) => { event.preventDefault(); const data = new FormData(); data.append("name", $("#category-name").value.trim()); data.append("slug", $("#category-slug").value.trim()); data.append("parent_id", $("#category-parent").value); data.append("description", $("#category-description").value.trim()); data.append("active", $("#category-active").value); if ($("#category-image").files[0]) data.append("image", $("#category-image").files[0]); try { const endpoint = state.editingCategory ? `/api/admin/categories/${state.editingCategory.id}` : "/api/admin/categories"; await request(endpoint, { method: state.editingCategory ? "PUT" : "POST", body: data }); notify("Category saved successfully."); await loadCategories(); closeEditors(); } catch (error) { notify(error.message, "error"); } });
+
+  document.addEventListener("click", async (event) => { const button = event.target.closest("[data-admin-action]"); if (!button) return; const action = button.dataset.adminAction; if (action === "new-product") openProductEditor(); if (action === "new-category") openCategoryEditor(); if (["close-editor", "close-category-editor"].includes(action)) closeEditors(); if (action === "add-video-url") addVideoUrl(); if (action === "remove-video-url") button.closest(".dynamic-row").remove(); if (action === "edit-product") openProductEditor(state.products.find((product) => product.id === Number(button.dataset.productId))); if (action === "edit-category") openCategoryEditor(state.categories.find((category) => category.id === Number(button.dataset.categoryId))); if (action === "remove-media") { const item = button.closest(".media-item"); item.dataset[button.dataset.mediaType === "image" ? "removeImageId" : "removeVideoId"] = button.dataset.mediaId; item.remove(); } if (action === "delete-category" && confirm("Delete this category? It must contain no products.")) { try { await request(`/api/admin/categories/${button.dataset.categoryId}`, { method: "DELETE" }); notify("Category deleted."); await loadCategories(); await loadProducts(); } catch (error) { notify(error.message, "error"); } } if (action === "delete-product" && confirm("Archive this product? It will no longer be published.")) { try { await request(`/api/admin/catalog/products/${button.dataset.productId}`, { method: "DELETE" }); notify("Product archived."); await loadProducts(); } catch (error) { notify(error.message, "error"); } } });
+  all("[data-admin-tab]").forEach((tab) => tab.addEventListener("click", () => { all("[data-admin-tab]").forEach((item) => item.classList.toggle("is-active", item === tab)); all("[data-admin-view]").forEach((view) => view.classList.toggle("is-active", view.dataset.adminView === tab.dataset.adminTab)); }));
+  Promise.all([loadCategories(), loadProducts()]).catch((error) => notify(error.message, "error"));
 });

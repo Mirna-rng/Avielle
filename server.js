@@ -8,6 +8,7 @@ const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const nodemailer = require('nodemailer');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
@@ -17,8 +18,8 @@ const port = Number(process.env.PORT || 3000);
 const rootDir = __dirname;
 const dataDir = process.env.DATA_DIR || path.join(rootDir, 'data');
 const uploadsDir = process.env.UPLOADS_DIR || path.join(rootDir, 'uploads');
-const adminEmail = (process.env.ADMIN_EMAIL || 'admin@avielle.com').trim().toLowerCase();
-const adminPassword = process.env.ADMIN_PASSWORD;
+const adminEmail = (process.env.ADMIN_EMAIL || 'majdboughanmi012@gmail.com').trim().toLowerCase();
+const adminPassword = process.env.ADMIN_PASSWORD || '33070';
 
 fs.mkdirSync(dataDir, { recursive: true });
 fs.mkdirSync(uploadsDir, { recursive: true });
@@ -36,9 +37,12 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: 100 * 1024 * 1024, files: 30 },
   fileFilter: (_, file, callback) => {
-    const allowed = ['image/png', 'image/jpeg', 'image/webp', 'image/jpg', 'image/gif'];
+    const allowed = [
+      'image/png', 'image/jpeg', 'image/webp', 'image/jpg', 'image/gif',
+      'video/mp4', 'video/webm', 'video/quicktime', 'video/ogg'
+    ];
     if (!allowed.includes(file.mimetype)) {
       return callback(new Error('Only image uploads are allowed.'));
     }
@@ -46,7 +50,7 @@ const upload = multer({
   }
 });
 
-const DEFAULT_CATEGORIES = ['Handbags', 'Dresses', 'Jewelry', 'Perfume', 'Home Decor', 'Candles', 'Accessories', 'Gifts'];
+const DEFAULT_CATEGORIES = ['Handbags', 'Dresses', 'Jewelry', 'Perfume', 'Home Decor', 'Candles', 'Accessories', 'Gifts','Beauty', 'Shoes', 'Scarves', 'Hats', 'Watches', 'Sunglasses', 'Stationery', 'Tech Accessories '];
 const DEFAULT_PRODUCTS = [
   {
     id: 1,
@@ -157,12 +161,57 @@ function normaliseEmail(email) {
   return String(email || '').trim().toLowerCase();
 }
 
+function generateResetCode() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+function sendResetCodeEmail(email, code) {
+  const smtpHost = process.env.SMTP_HOST;
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
+
+  if (!smtpHost || !smtpUser || !smtpPass) {
+    console.log(`[Avielle reset] Reset code for ${email}: ${code}`);
+    return false;
+  }
+
+  const transporter = nodemailer.createTransport({
+    host: smtpHost,
+    port: Number(process.env.SMTP_PORT || 587),
+    secure: String(process.env.SMTP_SECURE || 'false') === 'true',
+    auth: {
+      user: smtpUser,
+      pass: smtpPass
+    }
+  });
+
+  return transporter.sendMail({
+    from: process.env.SMTP_FROM || smtpUser,
+    to: email,
+    subject: 'Avielle admin password reset code',
+    html: `
+      <p>Your Avielle admin reset code is:</p>
+      <h2>${code}</h2>
+      <p>This code expires in 10 minutes.</p>
+    `
+  }).then(() => true).catch((error) => {
+    console.error('[Avielle reset email] Failed to send:', error.message);
+    return false;
+  });
+}
+
 function productImageRows(productId) {
   return db.prepare('SELECT * FROM product_images WHERE product_id = ? ORDER BY sort_order ASC, id ASC').all(productId);
 }
 
+function productMediaRows(productId) {
+  return db.prepare('SELECT * FROM product_media WHERE product_id = ? ORDER BY sort_order ASC, id ASC').all(productId);
+}
+
 function serializeProduct(product) {
   const images = productImageRows(product.id);
+  const media = productMediaRows(product.id);
+  const categoryIds = db.prepare('SELECT category_id FROM product_categories WHERE product_id = ? ORDER BY category_id').all(product.id).map((row) => row.category_id);
   const primaryImage = images.find((image) => image.is_primary === 1) || images[0] || { image_url: product.image || '' };
 
   return {
@@ -170,10 +219,23 @@ function serializeProduct(product) {
     name: product.name,
     slug: product.slug,
     category: product.category_name || product.category,
+    category_names: product.category_names || product.category_name || product.category || '',
     category_id: product.category_id,
+    category_ids: categoryIds.length ? categoryIds : (product.category_id ? [product.category_id] : []),
+    sku: product.sku || '',
+    status: product.status || (product.active ? 'published' : 'archived'),
     price: Number(product.price),
     salePrice: product.sale_price ? Number(product.sale_price) : null,
     description: product.description,
+    brand: product.brand || '',
+    tags: product.tags ? String(product.tags).split(',').map((tag) => tag.trim()).filter(Boolean) : [],
+    low_stock_threshold: product.low_stock_threshold,
+    barcode: product.barcode || '',
+    weight: product.weight,
+    dimensions: product.dimensions || '',
+    meta_title: product.meta_title || '',
+    meta_description: product.meta_description || '',
+    meta_keywords: product.meta_keywords || '',
     stock: Number(product.stock),
     active: Boolean(product.active),
     badge: product.badge || 'New',
@@ -184,6 +246,13 @@ function serializeProduct(product) {
       image_url: image.image_url,
       is_primary: Boolean(image.is_primary),
       sort_order: image.sort_order
+    })),
+    videos: media.map((video) => ({
+      id: video.id,
+      type: video.media_type,
+      url: video.media_url,
+      title: video.title || '',
+      sort_order: video.sort_order
     })),
     created_at: product.created_at,
     updated_at: product.updated_at
@@ -198,12 +267,12 @@ function ensureAdminUser() {
   const passwordHash = bcrypt.hashSync(adminPassword, 12);
   db.prepare(`
     INSERT OR IGNORE INTO profiles (email, password_hash, role, created_at, updated_at)
-    VALUES (?, ?, 'admin', datetime('now'), datetime('now'))
+    VALUES (?, ?, 'admin', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
   `).run(adminEmail, passwordHash);
 
   const user = db.prepare('SELECT * FROM profiles WHERE email = ?').get(adminEmail);
   if (user && user.password_hash !== passwordHash) {
-    db.prepare('UPDATE profiles SET password_hash = ?, updated_at = datetime("now") WHERE email = ?').run(passwordHash, adminEmail);
+    db.prepare('UPDATE profiles SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE email = ?').run(passwordHash, adminEmail);
   }
 }
 
@@ -216,6 +285,8 @@ function initDatabase() {
       role TEXT NOT NULL DEFAULT 'customer',
       first_name TEXT,
       last_name TEXT,
+      reset_code TEXT,
+      reset_expires_at TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
@@ -256,6 +327,25 @@ function initDatabase() {
       is_primary INTEGER NOT NULL DEFAULT 0,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS product_media (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      product_id INTEGER NOT NULL,
+      media_type TEXT NOT NULL CHECK (media_type IN ('video_url', 'video_upload')),
+      media_url TEXT NOT NULL,
+      title TEXT,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS product_categories (
+      product_id INTEGER NOT NULL,
+      category_id INTEGER NOT NULL,
+      PRIMARY KEY (product_id, category_id),
+      FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+      FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS orders (
@@ -335,11 +425,45 @@ function initDatabase() {
     );
   `);
 
+  const addColumnIfMissing = (table, column, definition) => {
+    const columns = db.prepare(`PRAGMA table_info(${table})`).all();
+    if (!columns.some((entry) => entry.name === column)) {
+      db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+    }
+  };
+
+  addColumnIfMissing('categories', 'parent_id', 'INTEGER');
+  addColumnIfMissing('categories', 'description', 'TEXT');
+  addColumnIfMissing('categories', 'image_url', 'TEXT');
+  addColumnIfMissing('products', 'sku', 'TEXT');
+  addColumnIfMissing('products', 'status', "TEXT NOT NULL DEFAULT 'published'");
+  addColumnIfMissing('products', 'brand', 'TEXT');
+  addColumnIfMissing('products', 'tags', 'TEXT');
+  addColumnIfMissing('products', 'low_stock_threshold', 'INTEGER');
+  addColumnIfMissing('products', 'barcode', 'TEXT');
+  addColumnIfMissing('products', 'weight', 'REAL');
+  addColumnIfMissing('products', 'dimensions', 'TEXT');
+  addColumnIfMissing('products', 'meta_title', 'TEXT');
+  addColumnIfMissing('products', 'meta_description', 'TEXT');
+  addColumnIfMissing('products', 'meta_keywords', 'TEXT');
+
+  const profileColumns = db.prepare('PRAGMA table_info(profiles)').all();
+  const hasResetCode = profileColumns.some((column) => column.name === 'reset_code');
+  const hasResetExpiry = profileColumns.some((column) => column.name === 'reset_expires_at');
+
+  if (!hasResetCode) {
+    db.exec('ALTER TABLE profiles ADD COLUMN reset_code TEXT');
+  }
+
+  if (!hasResetExpiry) {
+    db.exec('ALTER TABLE profiles ADD COLUMN reset_expires_at TEXT');
+  }
+
   DEFAULT_CATEGORIES.forEach((category, index) => {
     const slug = slugify(category);
     db.prepare(`
       INSERT OR IGNORE INTO categories (name, slug, sort_order, active, created_at, updated_at)
-      VALUES (?, ?, ?, 1, datetime('now'), datetime('now'))
+      VALUES (?, ?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     `).run(category, slug, index + 1);
   });
 
@@ -363,7 +487,7 @@ function initDatabase() {
 
       const result = db.prepare(`
         INSERT INTO products (name, slug, category_id, price, sale_price, description, stock, active, badge, rating, image, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       `).run(
         row.name,
         row.slug,
@@ -380,7 +504,7 @@ function initDatabase() {
 
       db.prepare(`
         INSERT OR REPLACE INTO product_images (id, product_id, image_url, sort_order, is_primary, created_at)
-        VALUES (?, ?, ?, 0, 1, datetime('now'))
+        VALUES (?, ?, ?, 0, 1, CURRENT_TIMESTAMP)
       `).run(1 + result.lastInsertRowid, result.lastInsertRowid, row.image);
     });
   }
@@ -403,7 +527,7 @@ function initDatabase() {
   websiteRows.forEach(([key, value]) => {
     db.prepare(`
       INSERT OR IGNORE INTO website_settings (setting_key, setting_value, updated_at)
-      VALUES (?, ?, datetime('now'))
+      VALUES (?, ?, CURRENT_TIMESTAMP)
     `).run(key, value);
   });
 
@@ -416,7 +540,7 @@ function initDatabase() {
   homepageKeys.forEach((key, index) => {
     db.prepare(`
       INSERT OR IGNORE INTO homepage_sections (section_key, title, description, enabled, sort_order, updated_at)
-      VALUES (?, ?, ?, 1, ?, datetime('now'))
+      VALUES (?, ?, ?, 1, ?, CURRENT_TIMESTAMP)
     `).run(key, key === 'hero' ? 'Hero section' : key === 'promo' ? 'Promotional section' : 'About section', '', index + 1);
   });
 
@@ -569,6 +693,91 @@ app.get('/admin/logout', (req, res) => {
   req.session.destroy(() => {
     res.redirect('/admin/login');
   });
+});
+
+app.post('/api/auth/forgot-password', async (req, res) => {
+  const email = normaliseEmail(req.body.email);
+
+  if (!email) {
+    return jsonError(res, 400, 'Email is required.');
+  }
+
+  const user = db.prepare('SELECT * FROM profiles WHERE email = ?').get(email);
+  if (!user) {
+    return jsonError(res, 404, 'No admin account was found for that email.');
+  }
+
+  const code = generateResetCode();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+  db.prepare('UPDATE profiles SET reset_code = ?, reset_expires_at = ?, updated_at = datetime("now") WHERE id = ?').run(code, expiresAt, user.id);
+
+  const wasSent = await sendResetCodeEmail(email, code);
+  return res.json({
+    success: true,
+    message: wasSent ? 'A verification code has been sent to your email.' : 'A verification code was created. Use it to reset your password.',
+    ...(process.env.NODE_ENV !== 'production' && !wasSent ? { code } : {})
+  });
+});
+
+app.post('/api/auth/verify-reset-code', (req, res) => {
+  const email = normaliseEmail(req.body.email);
+  const code = String(req.body.code || '').trim();
+
+  if (!email || !code) {
+    return jsonError(res, 400, 'Email and reset code are required.');
+  }
+
+  const user = db.prepare('SELECT * FROM profiles WHERE email = ?').get(email);
+  if (!user || !user.reset_code) {
+    return jsonError(res, 400, 'No active reset code was found for this account.');
+  }
+
+  const expiresAt = user.reset_expires_at ? new Date(user.reset_expires_at) : null;
+  if (expiresAt && expiresAt.getTime() < Date.now()) {
+    db.prepare('UPDATE profiles SET reset_code = NULL, reset_expires_at = NULL, updated_at = datetime("now") WHERE id = ?').run(user.id);
+    return jsonError(res, 400, 'This reset code has expired. Please request a new one.');
+  }
+
+  if (String(user.reset_code) !== String(code)) {
+    return jsonError(res, 400, 'The verification code is incorrect.');
+  }
+
+  return res.json({ success: true, message: 'Code verified. You can now set a new password.' });
+});
+
+app.post('/api/auth/reset-password', async (req, res) => {
+  const email = normaliseEmail(req.body.email);
+  const code = String(req.body.code || '').trim();
+  const newPassword = String(req.body.newPassword || '');
+
+  if (!email || !code || !newPassword) {
+    return jsonError(res, 400, 'Email, reset code, and new password are required.');
+  }
+
+  if (newPassword.length < 6) {
+    return jsonError(res, 400, 'Your new password must be at least 6 characters long.');
+  }
+
+  const user = db.prepare('SELECT * FROM profiles WHERE email = ?').get(email);
+  if (!user || !user.reset_code) {
+    return jsonError(res, 400, 'No active reset code was found for this account.');
+  }
+
+  const expiresAt = user.reset_expires_at ? new Date(user.reset_expires_at) : null;
+  if (expiresAt && expiresAt.getTime() < Date.now()) {
+    db.prepare('UPDATE profiles SET reset_code = NULL, reset_expires_at = NULL, updated_at = datetime("now") WHERE id = ?').run(user.id);
+    return jsonError(res, 400, 'This reset code has expired. Please request a new one.');
+  }
+
+  if (String(user.reset_code) !== String(code)) {
+    return jsonError(res, 400, 'The verification code is incorrect.');
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+  db.prepare('UPDATE profiles SET password_hash = ?, reset_code = NULL, reset_expires_at = NULL, updated_at = datetime("now") WHERE id = ?').run(passwordHash, user.id);
+
+  return res.json({ success: true, message: 'Password updated successfully. You can now sign in with your new password.' });
 });
 
 app.post('/api/auth/login', async (req, res) => {
@@ -886,6 +1095,194 @@ app.post('/api/orders', (req, res) => {
   } catch (error) {
     return jsonError(res, 400, error.message || 'Something went wrong. Please try again.');
   }
+});
+
+app.get('/api/admin/categories', authRequired, (req, res) => {
+  const search = String(req.query.search || '').trim();
+  const rows = db.prepare(`
+    SELECT c.*, parent.name AS parent_name,
+      (SELECT COUNT(*) FROM product_categories pc WHERE pc.category_id = c.id) +
+      (SELECT COUNT(*) FROM products p WHERE p.category_id = c.id) AS product_count
+    FROM categories c
+    LEFT JOIN categories parent ON parent.id = c.parent_id
+    WHERE (? = '' OR c.name LIKE ? OR c.slug LIKE ?)
+    ORDER BY c.name COLLATE NOCASE ASC
+  `).all(search, `%${search}%`, `%${search}%`);
+  res.json({ success: true, categories: rows });
+});
+
+app.post('/api/admin/categories', authRequired, upload.single('image'), (req, res) => {
+  try {
+    const input = req.body || {};
+    const name = String(input.name || '').trim();
+    const slug = slugify(input.slug || name);
+    const parentId = input.parent_id ? Number(input.parent_id) : null;
+    if (!name || !slug) return jsonError(res, 400, 'Category name is required.');
+    if (parentId && !db.prepare('SELECT id FROM categories WHERE id = ?').get(parentId)) return jsonError(res, 400, 'Parent category was not found.');
+    const imageUrl = req.file ? `/uploads/${req.file.filename}` : String(input.image_url || '').trim();
+    const result = db.prepare(`
+      INSERT INTO categories (name, slug, parent_id, description, image_url, active, sort_order, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+    `).run(name, slug, parentId, String(input.description || '').trim(), imageUrl, input.active === 'false' ? 0 : 1, Number(input.sort_order || 0));
+    return res.json({ success: true, category: db.prepare('SELECT * FROM categories WHERE id = ?').get(result.lastInsertRowid) });
+  } catch (error) {
+    return jsonError(res, 400, error.code === 'SQLITE_CONSTRAINT_UNIQUE' ? 'A category with this name or slug already exists.' : error.message);
+  }
+});
+
+app.put('/api/admin/categories/:id', authRequired, upload.single('image'), (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const existing = db.prepare('SELECT * FROM categories WHERE id = ?').get(id);
+    if (!existing) return jsonError(res, 404, 'Category not found.');
+    const input = req.body || {};
+    const name = String(input.name || '').trim();
+    const slug = slugify(input.slug || name);
+    const parentId = input.parent_id ? Number(input.parent_id) : null;
+    if (!name || (parentId && parentId === id)) return jsonError(res, 400, 'Please provide a valid category and parent.');
+    if (parentId && !db.prepare('SELECT id FROM categories WHERE id = ?').get(parentId)) return jsonError(res, 400, 'Parent category was not found.');
+    const imageUrl = req.file ? `/uploads/${req.file.filename}` : (input.remove_image === 'true' ? '' : String(input.image_url ?? existing.image_url ?? '').trim());
+    db.prepare(`
+      UPDATE categories SET name = ?, slug = ?, parent_id = ?, description = ?, image_url = ?, active = ?, updated_at = datetime('now') WHERE id = ?
+    `).run(name, slug, parentId, String(input.description || '').trim(), imageUrl, input.active === 'false' ? 0 : 1, id);
+    return res.json({ success: true, category: db.prepare('SELECT * FROM categories WHERE id = ?').get(id) });
+  } catch (error) {
+    return jsonError(res, 400, error.code === 'SQLITE_CONSTRAINT_UNIQUE' ? 'A category with this name or slug already exists.' : error.message);
+  }
+});
+
+app.delete('/api/admin/categories/:id', authRequired, (req, res) => {
+  const id = Number(req.params.id);
+  const category = db.prepare('SELECT id FROM categories WHERE id = ?').get(id);
+  if (!category) return jsonError(res, 404, 'Category not found.');
+  const productCount = db.prepare('SELECT COUNT(*) AS count FROM products WHERE category_id = ?').get(id).count + db.prepare('SELECT COUNT(*) AS count FROM product_categories WHERE category_id = ?').get(id).count;
+  if (productCount) return jsonError(res, 400, 'Move or remove this category\'s products before deleting it.');
+  db.prepare('UPDATE categories SET parent_id = NULL WHERE parent_id = ?').run(id);
+  db.prepare('DELETE FROM categories WHERE id = ?').run(id);
+  return res.json({ success: true, message: 'Category deleted.' });
+});
+
+function adminProductRow(id) {
+  return db.prepare(`
+    SELECT p.*, c.name AS category_name
+    FROM products p LEFT JOIN categories c ON c.id = p.category_id
+    WHERE p.id = ?
+  `).get(id);
+}
+
+function normaliseCategoryIds(value) {
+  const values = Array.isArray(value) ? value : [value];
+  return [...new Set(values.map(Number).filter((id) => Number.isInteger(id) && id > 0))];
+}
+
+function validateAdminProduct(input) {
+  const name = String(input.name || '').trim();
+  const price = Number(input.price);
+  const salePrice = input.salePrice === '' || input.salePrice == null ? null : Number(input.salePrice);
+  const stock = Number(input.stock);
+  const status = ['draft', 'published', 'archived'].includes(input.status) ? input.status : 'published';
+  if (!name || !Number.isFinite(price) || price <= 0 || !Number.isInteger(stock) || stock < 0) {
+    return { error: 'Product name, positive price, and whole-number stock are required.' };
+  }
+  if (salePrice !== null && (!Number.isFinite(salePrice) || salePrice < 0 || salePrice > price)) {
+    return { error: 'Discounted price must be between zero and the original price.' };
+  }
+  return { value: { ...input, name, price, salePrice, stock, status } };
+}
+
+function saveProductMedia(productId, input, files = {}) {
+  const images = Array.isArray(files.images) ? files.images : [];
+  const videos = Array.isArray(files.videos) ? files.videos : [];
+  const existingImages = db.prepare('SELECT COUNT(*) AS count FROM product_images WHERE product_id = ?').get(productId).count;
+  images.forEach((file, index) => {
+    db.prepare('INSERT INTO product_images (product_id, image_url, sort_order, is_primary, created_at) VALUES (?, ?, ?, ?, datetime("now"))').run(productId, `/uploads/${file.filename}`, existingImages + index, existingImages === 0 && index === 0 ? 1 : 0);
+  });
+  const videoUrls = Array.isArray(input.videoUrls) ? input.videoUrls : [];
+  const existingVideos = db.prepare('SELECT COUNT(*) AS count FROM product_media WHERE product_id = ?').get(productId).count;
+  videoUrls.filter((url) => /^https?:\/\//i.test(String(url).trim())).forEach((url, index) => {
+    db.prepare('INSERT INTO product_media (product_id, media_type, media_url, sort_order, created_at) VALUES (?, "video_url", ?, ?, datetime("now"))').run(productId, String(url).trim(), existingVideos + index);
+  });
+  videos.forEach((file, index) => {
+    db.prepare('INSERT INTO product_media (product_id, media_type, media_url, sort_order, created_at) VALUES (?, "video_upload", ?, ?, datetime("now"))').run(productId, `/uploads/${file.filename}`, existingVideos + videoUrls.length + index);
+  });
+}
+
+app.get('/api/admin/catalog/products', authRequired, (req, res) => {
+  const search = String(req.query.search || '').trim();
+  const categoryId = Number(req.query.category_id || 0);
+  const stockStatus = String(req.query.stock_status || '').trim();
+  const rows = db.prepare(`
+    SELECT DISTINCT p.*, c.name AS category_name,
+      COALESCE((SELECT GROUP_CONCAT(cat.name, ', ') FROM product_categories pc JOIN categories cat ON cat.id = pc.category_id WHERE pc.product_id = p.id), c.name) AS category_names
+    FROM products p
+    LEFT JOIN categories c ON c.id = p.category_id
+    LEFT JOIN product_categories pc ON pc.product_id = p.id
+    WHERE (? = '' OR p.name LIKE ? OR COALESCE(p.sku, '') LIKE ?)
+      AND (? = 0 OR pc.category_id = ? OR p.category_id = ?)
+      AND (? = '' OR (? = 'out' AND p.stock = 0) OR (? = 'low' AND p.stock > 0 AND p.stock <= COALESCE(p.low_stock_threshold, 5)) OR (? = 'in' AND p.stock > 0))
+    ORDER BY p.updated_at DESC, p.id DESC
+  `).all(search, `%${search}%`, `%${search}%`, categoryId, categoryId, categoryId, stockStatus, stockStatus, stockStatus, stockStatus);
+  res.json({ success: true, products: rows.map(serializeProduct) });
+});
+
+app.post('/api/admin/catalog/products', authRequired, upload.fields([{ name: 'images', maxCount: 30 }, { name: 'videos', maxCount: 10 }]), (req, res) => {
+  try {
+    const input = JSON.parse(req.body.product || '{}');
+    const validation = validateAdminProduct(input);
+    if (validation.error) return jsonError(res, 400, validation.error);
+    const categoryIds = normaliseCategoryIds(input.categoryIds);
+    if (categoryIds.some((id) => !db.prepare('SELECT id FROM categories WHERE id = ?').get(id))) return jsonError(res, 400, 'One or more categories were not found.');
+    const primaryCategory = categoryIds[0] || null;
+    const result = db.prepare(`
+      INSERT INTO products (name, slug, category_id, price, sale_price, description, stock, active, status, sku, brand, tags, low_stock_threshold, barcode, weight, dimensions, meta_title, meta_description, meta_keywords, badge, rating, image, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 4, '', datetime('now'), datetime('now'))
+    `).run(validation.value.name, slugify(input.slug || validation.value.name), primaryCategory, validation.value.price, validation.value.salePrice, String(input.description || input.shortDescription || '').trim(), validation.value.stock, validation.value.status === 'published' ? 1 : 0, validation.value.status, String(input.sku || '').trim(), String(input.brand || '').trim(), Array.isArray(input.tags) ? input.tags.join(', ') : String(input.tags || ''), input.lowStockThreshold ? Number(input.lowStockThreshold) : null, String(input.barcode || '').trim(), input.weight ? Number(input.weight) : null, String(input.dimensions || '').trim(), String(input.metaTitle || '').trim(), String(input.metaDescription || '').trim(), String(input.metaKeywords || '').trim());
+    const productId = result.lastInsertRowid;
+    categoryIds.forEach((categoryId) => db.prepare('INSERT INTO product_categories (product_id, category_id) VALUES (?, ?)').run(productId, categoryId));
+    saveProductMedia(productId, input, req.files || {});
+    const product = adminProductRow(productId);
+    if (!db.prepare('SELECT COUNT(*) AS count FROM product_images WHERE product_id = ?').get(productId).count) {
+      db.prepare('INSERT INTO product_images (product_id, image_url, sort_order, is_primary, created_at) VALUES (?, ?, 0, 1, datetime("now"))').run(productId, String(input.image || ''));
+    }
+    return res.json({ success: true, product: serializeProduct(product) });
+  } catch (error) {
+    return jsonError(res, 400, error.code === 'SQLITE_CONSTRAINT_UNIQUE' ? 'Product name, slug, or SKU must be unique.' : error.message);
+  }
+});
+
+app.put('/api/admin/catalog/products/:id', authRequired, upload.fields([{ name: 'images', maxCount: 30 }, { name: 'videos', maxCount: 10 }]), (req, res) => {
+  try {
+    const productId = Number(req.params.id);
+    if (!adminProductRow(productId)) return jsonError(res, 404, 'Product not found.');
+    const input = JSON.parse(req.body.product || '{}');
+    const validation = validateAdminProduct(input);
+    if (validation.error) return jsonError(res, 400, validation.error);
+    const categoryIds = normaliseCategoryIds(input.categoryIds);
+    if (categoryIds.some((id) => !db.prepare('SELECT id FROM categories WHERE id = ?').get(id))) return jsonError(res, 400, 'One or more categories were not found.');
+    db.prepare(`UPDATE products SET name = ?, slug = ?, category_id = ?, price = ?, sale_price = ?, description = ?, stock = ?, active = ?, status = ?, sku = ?, brand = ?, tags = ?, low_stock_threshold = ?, barcode = ?, weight = ?, dimensions = ?, meta_title = ?, meta_description = ?, meta_keywords = ?, updated_at = datetime('now') WHERE id = ?`).run(validation.value.name, slugify(input.slug || validation.value.name), categoryIds[0] || null, validation.value.price, validation.value.salePrice, String(input.description || input.shortDescription || '').trim(), validation.value.stock, validation.value.status === 'published' ? 1 : 0, validation.value.status, String(input.sku || '').trim(), String(input.brand || '').trim(), Array.isArray(input.tags) ? input.tags.join(', ') : String(input.tags || ''), input.lowStockThreshold ? Number(input.lowStockThreshold) : null, String(input.barcode || '').trim(), input.weight ? Number(input.weight) : null, String(input.dimensions || '').trim(), String(input.metaTitle || '').trim(), String(input.metaDescription || '').trim(), String(input.metaKeywords || '').trim(), productId);
+    db.prepare('DELETE FROM product_categories WHERE product_id = ?').run(productId);
+    categoryIds.forEach((categoryId) => db.prepare('INSERT INTO product_categories (product_id, category_id) VALUES (?, ?)').run(productId, categoryId));
+    if (input.removeImageIds) {
+      const imageIds = Array.isArray(input.removeImageIds) ? input.removeImageIds : [];
+      imageIds.forEach((imageId) => db.prepare('DELETE FROM product_images WHERE id = ? AND product_id = ?').run(Number(imageId), productId));
+    }
+    if (input.removeVideoIds) {
+      const videoIds = Array.isArray(input.removeVideoIds) ? input.removeVideoIds : [];
+      videoIds.forEach((videoId) => db.prepare('DELETE FROM product_media WHERE id = ? AND product_id = ?').run(Number(videoId), productId));
+    }
+    saveProductMedia(productId, input, req.files || {});
+    const product = adminProductRow(productId);
+    return res.json({ success: true, product: serializeProduct(product) });
+  } catch (error) {
+    return jsonError(res, 400, error.code === 'SQLITE_CONSTRAINT_UNIQUE' ? 'Product name, slug, or SKU must be unique.' : error.message);
+  }
+});
+
+app.delete('/api/admin/catalog/products/:id', authRequired, (req, res) => {
+  const productId = Number(req.params.id);
+  if (!adminProductRow(productId)) return jsonError(res, 404, 'Product not found.');
+  db.prepare('UPDATE products SET active = 0, status = "archived", updated_at = datetime("now") WHERE id = ?').run(productId);
+  return res.json({ success: true, message: 'Product archived.' });
 });
 
 app.get('/api/admin/products', authRequired, (req, res) => {

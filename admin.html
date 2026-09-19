@@ -9,11 +9,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="css/style.css" />
-    <script src="js/products.js" defer></script>
-    <script src="js/search.js" defer></script>
-    <script src="js/app.js" defer></script>
-    <script src="js/cart.js" defer></script>
-    <script src="js/wishlist.js" defer></script>
     <script src="js/admin.js" defer></script>
   </head>
   <body data-page="admin">
@@ -54,96 +49,81 @@
       </div>
     </header>
 
-    <main>
+    <main class="admin-workspace">
       <section class="page-banner">
         <div class="container page-banner__content">
-          <p class="eyebrow">Inventory</p>
-          <h1 class="page-banner__title">Manage Avielle products</h1>
-          <div class="breadcrumbs" aria-label="Breadcrumb">
-            <a href="index.html">Home</a>
-            <span> / </span>
-            <span>Admin</span>
-          </div>
+          <p class="eyebrow">Catalog control</p>
+          <h1 class="page-banner__title">Your inventory, your rules.</h1>
+          <div class="breadcrumbs" aria-label="Breadcrumb"><a href="index.html">Home</a><span> / </span><span>Admin</span></div>
         </div>
       </section>
 
       <section class="section section--tight">
-        <div class="container admin-shell">
-          <aside class="admin-panel">
-            <h2 id="product-form-title">Add product</h2>
-            <form id="product-form" class="admin-form">
-              <input type="hidden" id="product-id" />
+        <div class="container admin-console">
+          <div id="admin-notice" class="admin-notice" role="status" aria-live="polite"></div>
+          <div class="admin-tabs" role="tablist" aria-label="Catalog sections">
+            <button class="admin-tab is-active" type="button" data-admin-tab="products">Products <span id="product-count">0</span></button>
+            <button class="admin-tab" type="button" data-admin-tab="categories">Categories <span id="category-count">0</span></button>
+          </div>
 
-              <div class="form-field">
-                <label for="product-name">Product name</label>
-                <input id="product-name" name="name" type="text" placeholder="The Verona Tote" required />
-              </div>
-
-              <div class="form-field">
-                <label for="product-price">Price in TND</label>
-                <input id="product-price" name="price" type="number" min="0" step="0.01" placeholder="420" required />
-              </div>
-
-              <div class="form-field">
-                <label for="product-category">Category</label>
-                <select id="product-category" name="category" required>
-                  <option value="Handbags">Handbags</option>
-                  <option value="Dresses">Dresses</option>
-                  <option value="Jewelry">Jewelry</option>
-                  <option value="Perfume">Perfume</option>
-                  <option value="Home Decor">Home Decor</option>
-                  <option value="Candles">Candles</option>
-                  <option value="Accessories">Accessories</option>
-                  <option value="Gifts">Gifts</option>
-                </select>
-              </div>
-
-              <div class="form-field">
-                <label for="product-image">Product image URL</label>
-                <input id="product-image" name="image" type="url" placeholder="https://images.unsplash.com/..." required />
-              </div>
-
-              <div class="form-field">
-                <label for="product-stock">Stock quantity</label>
-                <input id="product-stock" name="stock" type="number" min="0" step="1" placeholder="12" required />
-              </div>
-
-              <div class="form-field">
-                <label for="product-description">Description</label>
-                <textarea id="product-description" name="description" placeholder="Describe the product in a polished, customer-friendly way." required></textarea>
-              </div>
-
-              <div class="admin-form-actions">
-                <button class="btn btn--primary" type="submit" id="product-submit-btn">Add Product</button>
-                <button class="btn btn--secondary" type="button" id="product-reset-btn">Reset</button>
-              </div>
-            </form>
-
-            <div class="admin-panel secondary-panel" style="margin-top: 1.5rem;">
-              <h2>Website content</h2>
-              <form id="website-form" class="admin-form">
-                <div class="form-field">
-                  <label for="hero-headline">Hero headline</label>
-                  <input id="hero-headline" type="text" />
-                </div>
-                <div class="form-field">
-                  <label for="hero-subtitle">Hero subtitle</label>
-                  <textarea id="hero-subtitle"></textarea>
-                </div>
-                <div class="form-field">
-                  <label for="hero-image">Hero image URL</label>
-                  <input id="hero-image" type="url" />
-                </div>
-                <div class="admin-form-actions">
-                  <button class="btn btn--primary" type="submit">Save website</button>
-                </div>
-              </form>
+          <section class="admin-view is-active" data-admin-view="products">
+            <div class="admin-toolbar">
+              <div><p class="eyebrow">Catalog</p><h2>Products</h2></div>
+              <button class="btn btn--primary" type="button" data-admin-action="new-product">Add product</button>
             </div>
-          </aside>
+            <div class="admin-filters">
+              <input id="product-search" type="search" placeholder="Search name or SKU" aria-label="Search products" />
+              <select id="product-filter-category" aria-label="Filter by category"><option value="">All categories</option></select>
+              <select id="product-filter-stock" aria-label="Filter by stock"><option value="">All stock</option><option value="in">In stock</option><option value="low">Low stock</option><option value="out">Out of stock</option></select>
+            </div>
+            <div id="admin-product-list" class="admin-table-wrap"></div>
+          </section>
 
-          <section class="admin-panel">
-            <h2>Current catalog</h2>
-            <div id="admin-product-list" class="admin-list"></div>
+          <section class="admin-view" data-admin-view="categories">
+            <div class="admin-toolbar">
+              <div><p class="eyebrow">Structure</p><h2>Categories</h2></div>
+              <button class="btn btn--primary" type="button" data-admin-action="new-category">Add category</button>
+            </div>
+            <div class="admin-filters"><input id="category-search" type="search" placeholder="Search categories" aria-label="Search categories" /></div>
+            <div id="admin-category-list" class="admin-table-wrap"></div>
+          </section>
+
+          <section id="product-editor" class="admin-editor" hidden>
+            <div class="admin-toolbar"><div><p class="eyebrow">Product editor</p><h2 id="product-form-title">Add product</h2></div><button class="btn btn--secondary" type="button" data-admin-action="close-editor">Close</button></div>
+            <form id="product-form" class="admin-form admin-form--wide">
+              <input type="hidden" id="product-id" />
+              <fieldset><legend>Basic information</legend><div class="form-grid">
+                <div class="form-field"><label for="product-name">Product name *</label><input id="product-name" required maxlength="160" /></div>
+                <div class="form-field"><label for="product-slug">Slug</label><input id="product-slug" /></div>
+                <div class="form-field"><label for="product-sku">SKU</label><input id="product-sku" /></div>
+                <div class="form-field"><label for="product-status">Status</label><select id="product-status"><option value="published">Published</option><option value="draft">Draft</option><option value="archived">Archived</option></select></div>
+                <div class="form-field form-field--full"><label for="product-description">Description *</label><textarea id="product-description" required></textarea></div>
+              </div></fieldset>
+              <fieldset><legend>Pricing and stock</legend><div class="form-grid">
+                <div class="form-field"><label for="product-price">Price *</label><input id="product-price" type="number" min="0.01" step="0.01" required /></div>
+                <div class="form-field"><label for="product-sale-price">Discounted price</label><input id="product-sale-price" type="number" min="0" step="0.01" /></div>
+                <div class="form-field"><label for="product-discount">Discount</label><input id="product-discount" readonly /></div>
+                <div class="form-field"><label for="product-stock">Quantity *</label><input id="product-stock" type="number" min="0" step="1" required /></div>
+                <div class="form-field"><label for="product-threshold">Low stock threshold</label><input id="product-threshold" type="number" min="0" step="1" /></div>
+                <div class="form-field"><label for="product-barcode">Barcode / GTIN</label><input id="product-barcode" /></div>
+              </div></fieldset>
+              <fieldset><legend>Categories</legend><div id="product-category-options" class="admin-check-grid"></div></fieldset>
+              <fieldset><legend>Product images</legend><div class="form-field"><label for="product-images">Add images</label><input id="product-images" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple /></div><div id="product-image-preview" class="media-grid"></div><input id="product-image" type="hidden" /></fieldset>
+              <fieldset><legend>Product videos</legend><div id="product-video-urls" class="dynamic-list"></div><button class="btn btn--secondary" type="button" data-admin-action="add-video-url">Add video URL</button><div class="form-field"><label for="product-videos">Upload videos</label><input id="product-videos" type="file" accept="video/mp4,video/webm,video/quicktime,video/ogg" multiple /></div><div id="product-video-preview" class="media-grid"></div></fieldset>
+              <fieldset><legend>Additional information</legend><div class="form-grid">
+                <div class="form-field"><label for="product-brand">Brand</label><input id="product-brand" /></div>
+                <div class="form-field"><label for="product-tags">Tags</label><input id="product-tags" placeholder="silk, evening, gift" /></div>
+                <div class="form-field"><label for="product-weight">Weight</label><input id="product-weight" type="number" min="0" step="0.01" /></div>
+                <div class="form-field"><label for="product-dimensions">Dimensions</label><input id="product-dimensions" placeholder="Length x width x height" /></div>
+              </div></fieldset>
+              <fieldset><legend>SEO</legend><div class="form-grid"><div class="form-field"><label for="product-meta-title">Meta title</label><input id="product-meta-title" /></div><div class="form-field"><label for="product-meta-keywords">Meta keywords</label><input id="product-meta-keywords" /></div><div class="form-field form-field--full"><label for="product-meta-description">Meta description</label><textarea id="product-meta-description"></textarea></div></div></fieldset>
+              <div class="admin-form-actions"><button class="btn btn--primary" type="submit" id="product-submit-btn">Save product</button><button class="btn btn--secondary" type="button" id="product-save-another">Save &amp; add another</button><button class="btn btn--secondary" type="button" data-admin-action="close-editor">Cancel</button></div>
+            </form>
+          </section>
+
+          <section id="category-editor" class="admin-editor" hidden>
+            <div class="admin-toolbar"><div><p class="eyebrow">Category editor</p><h2 id="category-form-title">Add category</h2></div><button class="btn btn--secondary" type="button" data-admin-action="close-category-editor">Close</button></div>
+            <form id="category-form" class="admin-form"><input type="hidden" id="category-id" /><div class="form-grid"><div class="form-field"><label for="category-name">Name *</label><input id="category-name" required /></div><div class="form-field"><label for="category-slug">Slug</label><input id="category-slug" /></div><div class="form-field"><label for="category-parent">Parent category</label><select id="category-parent"><option value="">No parent</option></select></div><div class="form-field"><label for="category-active">Status</label><select id="category-active"><option value="true">Active</option><option value="false">Inactive</option></select></div><div class="form-field form-field--full"><label for="category-description">Description</label><textarea id="category-description"></textarea></div><div class="form-field form-field--full"><label for="category-image">Category image</label><input id="category-image" type="file" accept="image/png,image/jpeg,image/webp,image/gif" /></div></div><div id="category-image-preview" class="media-grid"></div><div class="admin-form-actions"><button class="btn btn--primary" type="submit">Save category</button><button class="btn btn--secondary" type="button" data-admin-action="close-category-editor">Cancel</button></div></form>
           </section>
         </div>
       </section>
