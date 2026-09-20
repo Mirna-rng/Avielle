@@ -622,7 +622,7 @@ app.get('/health', (_, res) => {
 app.use(blockPrivateFiles);
 app.use(express.static(rootDir, { dotfiles: 'deny' }));
 app.use('/uploads', express.static(uploadsDir));
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(session({
   secret: process.env.SESSION_SECRET || 'avielle-session-secret',
@@ -849,15 +849,27 @@ app.post('/api/internal/sync/product', (req, res) => {
       categoryId = category.id;
     }
 
+    const syncedFiles = Array.isArray(input.mediaFiles) ? input.mediaFiles : [];
+    syncedFiles.forEach((file) => {
+      if (!file.filename || !file.data) return;
+      fs.writeFileSync(path.join(uploadsDir, path.basename(file.filename)), Buffer.from(file.data, 'base64'));
+    });
+    const remoteImages = Array.isArray(input.images) ? input.images.map((image) => {
+      const file = syncedFiles.find((item) => item.source === image.image_url);
+      return file ? `/uploads/${path.basename(file.filename)}` : image.image_url;
+    }) : [];
+    const remotePrimaryImage = remoteImages[0] || input.image || '';
     const existing = db.prepare('SELECT id FROM products WHERE slug = ?').get(slug);
-    const values = [name, slug, categoryId, price, input.salePrice == null ? null : Number(input.salePrice), String(input.description || '').trim(), stock, status === 'published' ? 1 : 0, status, String(input.sku || '').trim(), String(input.brand || '').trim(), Array.isArray(input.tags) ? input.tags.join(', ') : String(input.tags || ''), input.image || '', new Date().toISOString()];
+    const values = [name, slug, categoryId, price, input.salePrice == null ? null : Number(input.salePrice), String(input.description || '').trim(), stock, status === 'published' ? 1 : 0, status, String(input.sku || '').trim(), String(input.brand || '').trim(), Array.isArray(input.tags) ? input.tags.join(', ') : String(input.tags || ''), remotePrimaryImage, new Date().toISOString()];
     const productId = existing
       ? (db.prepare('UPDATE products SET name = ?, slug = ?, category_id = ?, price = ?, sale_price = ?, description = ?, stock = ?, active = ?, status = ?, sku = ?, brand = ?, tags = ?, image = ?, updated_at = ? WHERE id = ?').run(...values, existing.id), existing.id)
       : db.prepare("INSERT INTO products (name, slug, category_id, price, sale_price, description, stock, active, status, sku, brand, tags, image, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), ?)").run(...values).lastInsertRowid;
 
-    if (input.image) {
+    if (remoteImages.length || remotePrimaryImage) {
       db.prepare('DELETE FROM product_images WHERE product_id = ?').run(productId);
-      db.prepare("INSERT INTO product_images (product_id, image_url, sort_order, is_primary, created_at) VALUES (?, ?, 0, 1, datetime('now'))").run(productId, String(input.image));
+      (remoteImages.length ? remoteImages : [remotePrimaryImage]).forEach((image, index) => {
+        db.prepare("INSERT INTO product_images (product_id, image_url, sort_order, is_primary, created_at) VALUES (?, ?, ?, ?, datetime('now'))").run(productId, image, index, index === 0 ? 1 : 0);
+      });
     }
 
     return res.json({ success: true, product: serializeProduct(adminProductRow(productId)) });
@@ -1281,13 +1293,22 @@ app.post('/api/admin/catalog/products/:id/publish-live', authRequired, async (re
   if (!product) return jsonError(res, 404, 'Product not found.');
 
   try {
+    const productPayload = serializeProduct(product);
+    productPayload.mediaFiles = productPayload.images
+      .filter((image) => image.image_url.startsWith('/uploads/'))
+      .map((image) => {
+        const filename = path.basename(image.image_url);
+        const localPath = path.join(uploadsDir, filename);
+        return fs.existsSync(localPath) ? { source: image.image_url, filename, data: fs.readFileSync(localPath).toString('base64') } : null;
+      })
+      .filter(Boolean);
     const response = await fetch(`${liveSiteUrl}/api/internal/sync/product`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-Avielle-Sync-Token': liveSyncToken
       },
-      body: JSON.stringify(serializeProduct(product))
+      body: JSON.stringify(productPayload)
     });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) return jsonError(res, response.status, result.message || 'Render rejected the product sync.');
