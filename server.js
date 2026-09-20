@@ -843,7 +843,7 @@ app.post('/api/internal/sync/product', (req, res) => {
     if (categoryName) {
       let category = db.prepare('SELECT id FROM categories WHERE name = ?').get(categoryName);
       if (!category) {
-        const categoryResult = db.prepare('INSERT INTO categories (name, slug, active, sort_order, created_at, updated_at) VALUES (?, ?, 1, 0, datetime("now"), datetime("now"))').run(categoryName, slugify(categoryName));
+        const categoryResult = db.prepare("INSERT INTO categories (name, slug, active, sort_order, created_at, updated_at) VALUES (?, ?, 1, 0, datetime('now'), datetime('now'))").run(categoryName, slugify(categoryName));
         category = { id: categoryResult.lastInsertRowid };
       }
       categoryId = category.id;
@@ -853,11 +853,11 @@ app.post('/api/internal/sync/product', (req, res) => {
     const values = [name, slug, categoryId, price, input.salePrice == null ? null : Number(input.salePrice), String(input.description || '').trim(), stock, status === 'published' ? 1 : 0, status, String(input.sku || '').trim(), String(input.brand || '').trim(), Array.isArray(input.tags) ? input.tags.join(', ') : String(input.tags || ''), input.image || '', new Date().toISOString()];
     const productId = existing
       ? (db.prepare('UPDATE products SET name = ?, slug = ?, category_id = ?, price = ?, sale_price = ?, description = ?, stock = ?, active = ?, status = ?, sku = ?, brand = ?, tags = ?, image = ?, updated_at = ? WHERE id = ?').run(...values, existing.id), existing.id)
-      : db.prepare('INSERT INTO products (name, slug, category_id, price, sale_price, description, stock, active, status, sku, brand, tags, image, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime("now"), ?)').run(...values).lastInsertRowid;
+      : db.prepare("INSERT INTO products (name, slug, category_id, price, sale_price, description, stock, active, status, sku, brand, tags, image, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), ?)").run(...values).lastInsertRowid;
 
     if (input.image) {
       db.prepare('DELETE FROM product_images WHERE product_id = ?').run(productId);
-      db.prepare('INSERT INTO product_images (product_id, image_url, sort_order, is_primary, created_at) VALUES (?, ?, 0, 1, datetime("now"))').run(productId, String(input.image));
+      db.prepare("INSERT INTO product_images (product_id, image_url, sort_order, is_primary, created_at) VALUES (?, ?, 0, 1, datetime('now'))").run(productId, String(input.image));
     }
 
     return res.json({ success: true, product: serializeProduct(adminProductRow(productId)) });
@@ -1242,15 +1242,15 @@ function saveProductMedia(productId, input, files = {}) {
   const videos = Array.isArray(files.videos) ? files.videos : [];
   const existingImages = db.prepare('SELECT COUNT(*) AS count FROM product_images WHERE product_id = ?').get(productId).count;
   images.forEach((file, index) => {
-    db.prepare('INSERT INTO product_images (product_id, image_url, sort_order, is_primary, created_at) VALUES (?, ?, ?, ?, datetime("now"))').run(productId, `/uploads/${file.filename}`, existingImages + index, existingImages === 0 && index === 0 ? 1 : 0);
+    db.prepare("INSERT INTO product_images (product_id, image_url, sort_order, is_primary, created_at) VALUES (?, ?, ?, ?, datetime('now'))").run(productId, `/uploads/${file.filename}`, existingImages + index, existingImages === 0 && index === 0 ? 1 : 0);
   });
   const videoUrls = Array.isArray(input.videoUrls) ? input.videoUrls : [];
   const existingVideos = db.prepare('SELECT COUNT(*) AS count FROM product_media WHERE product_id = ?').get(productId).count;
   videoUrls.filter((url) => /^https?:\/\//i.test(String(url).trim())).forEach((url, index) => {
-    db.prepare('INSERT INTO product_media (product_id, media_type, media_url, sort_order, created_at) VALUES (?, "video_url", ?, ?, datetime("now"))').run(productId, String(url).trim(), existingVideos + index);
+    db.prepare("INSERT INTO product_media (product_id, media_type, media_url, sort_order, created_at) VALUES (?, 'video_url', ?, ?, datetime('now'))").run(productId, String(url).trim(), existingVideos + index);
   });
   videos.forEach((file, index) => {
-    db.prepare('INSERT INTO product_media (product_id, media_type, media_url, sort_order, created_at) VALUES (?, "video_upload", ?, ?, datetime("now"))').run(productId, `/uploads/${file.filename}`, existingVideos + videoUrls.length + index);
+    db.prepare("INSERT INTO product_media (product_id, media_type, media_url, sort_order, created_at) VALUES (?, 'video_upload', ?, ?, datetime('now'))").run(productId, `/uploads/${file.filename}`, existingVideos + videoUrls.length + index);
   });
 }
 
@@ -1308,13 +1308,13 @@ app.post('/api/admin/catalog/products', authRequired, upload.fields([{ name: 'im
     const result = db.prepare(`
       INSERT INTO products (name, slug, category_id, price, sale_price, description, stock, active, status, sku, brand, tags, low_stock_threshold, barcode, weight, dimensions, meta_title, meta_description, meta_keywords, badge, rating, image, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 4, '', datetime('now'), datetime('now'))
-    `).run(validation.value.name, slugify(input.slug || validation.value.name), primaryCategory, validation.value.price, validation.value.salePrice, String(input.description || input.shortDescription || '').trim(), validation.value.stock, validation.value.status === 'published' ? 1 : 0, validation.value.status, String(input.sku || '').trim(), String(input.brand || '').trim(), Array.isArray(input.tags) ? input.tags.join(', ') : String(input.tags || ''), input.lowStockThreshold ? Number(input.lowStockThreshold) : null, String(input.barcode || '').trim(), input.weight ? Number(input.weight) : null, String(input.dimensions || '').trim(), String(input.metaTitle || '').trim(), String(input.metaDescription || '').trim(), String(input.metaKeywords || '').trim());
+    `).run(validation.value.name, slugify(input.slug || validation.value.name), primaryCategory, validation.value.price, validation.value.salePrice, String(input.description || input.shortDescription || '').trim(), validation.value.stock, validation.value.status === 'published' ? 1 : 0, validation.value.status, String(input.sku || '').trim(), String(input.brand || '').trim(), Array.isArray(input.tags) ? input.tags.join(', ') : String(input.tags || ''), input.lowStockThreshold ? Number(input.lowStockThreshold) : null, String(input.barcode || '').trim(), input.weight ? Number(input.weight) : null, String(input.dimensions || '').trim(), String(input.metaTitle || '').trim(), String(input.metaDescription || '').trim(), String(input.metaKeywords || '').trim(), String(input.badge || 'New'));
     const productId = result.lastInsertRowid;
     categoryIds.forEach((categoryId) => db.prepare('INSERT INTO product_categories (product_id, category_id) VALUES (?, ?)').run(productId, categoryId));
     saveProductMedia(productId, input, req.files || {});
     const product = adminProductRow(productId);
     if (!db.prepare('SELECT COUNT(*) AS count FROM product_images WHERE product_id = ?').get(productId).count) {
-      db.prepare('INSERT INTO product_images (product_id, image_url, sort_order, is_primary, created_at) VALUES (?, ?, 0, 1, datetime("now"))').run(productId, String(input.image || ''));
+      db.prepare("INSERT INTO product_images (product_id, image_url, sort_order, is_primary, created_at) VALUES (?, ?, 0, 1, datetime('now'))").run(productId, String(input.image || ''));
     }
     return res.json({ success: true, product: serializeProduct(product) });
   } catch (error) {
@@ -1353,7 +1353,7 @@ app.put('/api/admin/catalog/products/:id', authRequired, upload.fields([{ name: 
 app.delete('/api/admin/catalog/products/:id', authRequired, (req, res) => {
   const productId = Number(req.params.id);
   if (!adminProductRow(productId)) return jsonError(res, 404, 'Product not found.');
-  db.prepare('UPDATE products SET active = 0, status = "archived", updated_at = datetime("now") WHERE id = ?').run(productId);
+  db.prepare("UPDATE products SET active = 0, status = 'archived', updated_at = datetime('now') WHERE id = ?").run(productId);
   return res.json({ success: true, message: 'Product archived.' });
 });
 
