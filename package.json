@@ -4,7 +4,7 @@
   "description": "Avielle luxury e-commerce storefront with protected admin dashboard.",
   "main": "server.js",
   "engines": {
-    "node": ">=20 <24"
+    "node": ">=22 <25"
   },
   "scripts": {
     "start": "node server.js",
