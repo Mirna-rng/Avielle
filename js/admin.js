@@ -6,13 +6,16 @@ document.addEventListener("DOMContentLoaded", () => {
   const all = (selector) => [...document.querySelectorAll(selector)];
   const escapeHtml = (value) => String(value ?? "").replace(/[&<>\"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[character]));
   const slugify = (value) => String(value || "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-  const notify = (message, type = "success") => { const element = $("#admin-notice"); element.textContent = message; element.className = `admin-notice is-visible ${type}`; setTimeout(() => element.classList.remove("is-visible"), 4000); };
+  const notify = (message, type = "success") => { const element = $("#admin-notice"); element.textContent = message === "Product saved successfully." ? "Product saved and published to Render." : message; element.className = `admin-notice is-visible ${type}`; setTimeout(() => element.classList.remove("is-visible"), 4000); };
 
   async function request(url, options = {}) {
     const headers = options.body instanceof FormData ? {} : { "Content-Type": "application/json" };
     const response = await fetch(url, { credentials: "same-origin", ...options, headers: { ...headers, ...(options.headers || {}) } });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.message || "Request failed.");
+    if (/^\/api\/admin\/catalog\/products(?:\/\d+)?$/.test(url) && ["POST", "PUT"].includes((options.method || "POST").toUpperCase()) && data.product?.id) {
+      await request(`/api/admin/catalog/products/${data.product.id}/publish-live`, { method: "POST" });
+    }
     return data;
   }
 
